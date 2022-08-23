@@ -182,64 +182,6 @@ contract LentMyc is ERC20 {
     // TODO cancel deposit/withdrawal request. Make sure can't do during 2 hour window
     // TODO go through all functions and ensure correct permissions.
 
-    /**
-     * @notice Sets the amount of MYC that can be deposited into the contract.
-     */
-    function setDepositCap(uint256 newDepositCap) external onlyGov {
-        emit SetDepositCap(depositCap, newDepositCap);
-        depositCap = newDepositCap;
-    }
-
-    /**
-     * @notice Sets the cycleLength (approximate number of seconds each cycle lasts for).
-     * @param newCycleLength The new cycleLength value.
-     * @dev Requires `newCycleLength > 0`.
-     */
-    function setCycleLength(uint256 newCycleLength) external onlyGov {
-        require(newCycleLength > 0, "cycleLength == 0");
-        emit SetCycleLength(cycleLength, newCycleLength);
-        cycleLength = newCycleLength;
-    }
-
-    /**
-     * @notice Sets the preCycleTimelock (number of seconds before cycleStartTime + cycleLength for which deposit and redeem requests are blocked).
-     * @param newPreCycleTimelock The new preCycleTimelock value.
-     */
-    function setPreCycleTimelock(uint256 newPreCycleTimelock) external onlyGov {
-        emit SetPreCycleTimelock(preCycleTimelock, newPreCycleTimelock);
-        preCycleTimelock = newPreCycleTimelock;
-    }
-
-    /**
-     * @notice Initiates a transfer of contract governance.
-     * @param _gov The new pending gov address.
-     * @dev After `signalSetGov` is called, `claimGov` can be called by `_gov` to claim the `gov` role.
-     */
-    function signalSetGov(address _gov) external onlyGov {
-        pendingNewGov = _gov;
-        emit SignalSetGov(_gov);
-    }
-
-    /**
-     * @notice Claims `pendingNewGov` as the new `gov` address.
-     * @dev `signalSetGov` sets `pendingNewGov`. `claimGov` sets `gov` as `pendingNewGov`.
-     * @dev Requires `msg.sender == pendingNewGov`.
-     */
-    function claimGov() external {
-        require(msg.sender == pendingNewGov, "msg.sender != pendingNewGov");
-        emit NewGov(gov, msg.sender);
-        gov = pendingNewGov;
-        pendingNewGov = address(0);
-    }
-
-    /**
-     * @notice Cancels any pending gov transfer initiated by `signalSetGov`.
-     */
-    function cancelGovTransfer() external onlyGov {
-        pendingNewGov = address(0);
-        emit CancelGovTransfer();
-    }
-
     // TODO redeems aren't automatically sent out. Front-end needs a way to "claim" redeems (which would, in reality, just be calling updateUser).
     /**
      * @notice Updates a users lentMYC, MYC balances, and ETH rewards.
@@ -625,5 +567,67 @@ contract LentMyc is ERC20 {
         emit Transfer(address(this), to, amount);
 
         return true;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                                SETTERS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Sets the amount of MYC that can be deposited into the contract.
+     */
+    function setDepositCap(uint256 newDepositCap) external onlyGov {
+        emit SetDepositCap(depositCap, newDepositCap);
+        depositCap = newDepositCap;
+    }
+
+    /**
+     * @notice Sets the cycleLength (approximate number of seconds each cycle lasts for).
+     * @param newCycleLength The new cycleLength value.
+     * @dev Requires `newCycleLength > 0`.
+     */
+    function setCycleLength(uint256 newCycleLength) external onlyGov {
+        require(newCycleLength > 0, "cycleLength == 0");
+        emit SetCycleLength(cycleLength, newCycleLength);
+        cycleLength = newCycleLength;
+    }
+
+    /**
+     * @notice Sets the preCycleTimelock (number of seconds before cycleStartTime + cycleLength for which deposit and redeem requests are blocked).
+     * @param newPreCycleTimelock The new preCycleTimelock value.
+     */
+    function setPreCycleTimelock(uint256 newPreCycleTimelock) external onlyGov {
+        emit SetPreCycleTimelock(preCycleTimelock, newPreCycleTimelock);
+        preCycleTimelock = newPreCycleTimelock;
+    }
+
+    /**
+     * @notice Initiates a transfer of contract governance.
+     * @param _gov The new pending gov address.
+     * @dev After `signalSetGov` is called, `claimGov` can be called by `_gov` to claim the `gov` role.
+     */
+    function signalSetGov(address _gov) external onlyGov {
+        pendingNewGov = _gov;
+        emit SignalSetGov(_gov);
+    }
+
+    /**
+     * @notice Claims `pendingNewGov` as the new `gov` address.
+     * @dev `signalSetGov` sets `pendingNewGov`. `claimGov` sets `gov` as `pendingNewGov`.
+     * @dev Requires `msg.sender == pendingNewGov`.
+     */
+    function claimGov() external {
+        require(msg.sender == pendingNewGov, "msg.sender != pendingNewGov");
+        emit NewGov(gov, msg.sender);
+        gov = pendingNewGov;
+        pendingNewGov = address(0);
+    }
+
+    /**
+     * @notice Cancels any pending gov transfer initiated by `signalSetGov`.
+     */
+    function cancelGovTransfer() external onlyGov {
+        pendingNewGov = address(0);
+        emit CancelGovTransfer();
     }
 }
