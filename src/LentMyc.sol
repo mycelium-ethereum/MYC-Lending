@@ -223,7 +223,9 @@ contract LentMyc is ERC20 {
     }
 
     /**
-     * @notice
+     * @notice Requests a given number of MYC are deposited at the end of the current cycle.
+     * @param assets Number of MYC to deposit.
+     * @param receiver The receiver of the lMYC. Must equal `msg.sender` (Exists for ERC4626-compliance).
      */
     function deposit(uint256 assets, address receiver) external {
         // We have a `receiver` parameter, but this is just to be semi-compliant to ERC4626.
@@ -246,11 +248,11 @@ contract LentMyc is ERC20 {
     }
 
     /**
-     * @notice Requests a given number of shares are redeemed at the end of this cycle.
-     * @param shares Number of shares to redeem.
-     * @param receiver The receiver of the shares. Must equal `msg.sender` (Exists for ERC4626-compliance).
-     * @param receiver The owner of the shares. Must equal `msg.sender` (Exists for ERC4626-compliance).
-     * @dev Instantly burns `shares` shares.
+     * @notice Requests a given number of lMYC are redeemed at the end of this cycle.
+     * @param shares Number of lMYC to redeem.
+     * @param receiver The receiver of the redeemed MYC. Must equal `msg.sender` (Exists for ERC4626-compliance).
+     * @param owner The owner of the lMYC. Must equal `msg.sender` (Exists for ERC4626-compliance).
+     * @dev Instantly burns `shares` lMYC.
      * @dev Calls updateUser on `msg.sender`.
      * @dev Request to not be in preCycleTimelock.
      */
