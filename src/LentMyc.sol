@@ -395,7 +395,7 @@ contract LentMyc is ERC20 {
 
         // Ensure after new cycle starts, enough is in contract to pay out the pending redemptions.
         require(
-            asset.balanceOf(address(this)) > redemptionAssets,
+            asset.balanceOf(address(this)) >= redemptionAssets,
             "MYC given is less than required"
         );
     }
