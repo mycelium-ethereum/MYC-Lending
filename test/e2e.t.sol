@@ -55,7 +55,6 @@ contract E2E is Test {
 
         // uint256 rewardAmount = 3 * 10**15; // 0.003 ETH
         // uint256 lossAmount = 20 * 10**18; // 20 MYC
-        uint256 amountToWithdraw = 30;
         // Stack too deep :(
         Users memory users = Users({
             user: address(123),
@@ -148,7 +147,6 @@ contract E2E is Test {
         );
 
         // Test a 3rd participant entering doesn't get anything.
-        console.log("1");
         myc.transfer(users.user2, depositAmount);
         vm.prank(users.user2);
         myc.approve(address(mycLend), depositAmount);
