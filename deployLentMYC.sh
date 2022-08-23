@@ -9,3 +9,4 @@ depositCap="100000000000000000000000"
 forge create --rpc-url $RPC_URL \
     --constructor-args $myc $gov $decimals $cycleLength $firstCycleStart $preCycleTimelock $depositCap \
     --private-key $PRIVATE_KEY src/LentMyc.sol:LentMyc
+
