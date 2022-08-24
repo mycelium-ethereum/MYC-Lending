@@ -285,7 +285,7 @@ contract LentMyc is ERC20 {
         latestPendingDeposit[receiver] = cycle;
         pendingDeposits += assets;
         userPendingDeposits[receiver] += assets;
-        asset.transferFrom(receiver, address(this), assets);
+        asset.safeTransferFrom(receiver, address(this), assets);
     }
 
     /**
@@ -392,7 +392,7 @@ contract LentMyc is ERC20 {
             _totalAssets: totalAssets
         });
 
-        asset.transfer(msg.sender, amountToWithdraw);
+        asset.safeTransfer(msg.sender, amountToWithdraw);
         amountDeployed += amountToWithdraw;
 
         // Ensure after new cycle starts, enough is in contract to pay out the pending redemptions.
@@ -408,7 +408,7 @@ contract LentMyc is ERC20 {
      * @dev Use instead of normal ERC20 transfer so as to allow the contract.
      */
     function returnMyc(uint256 amount) external onlyGov {
-        asset.transferFrom(msg.sender, address(this), amount);
+        asset.safeTransferFrom(msg.sender, address(this), amount);
         amountDeployed -= amount;
     }
 
@@ -426,7 +426,7 @@ contract LentMyc is ERC20 {
      * @notice Emergency ERC20 token withdrawal function.
      */
     function withdrawToken(address token, uint256 amount) external onlyGov {
-        ERC20(token).transfer(msg.sender, amount);
+        ERC20(token).safeTransfer(msg.sender, amount);
     }
 
     // TODO add interface
