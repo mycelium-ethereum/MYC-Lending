@@ -5,6 +5,7 @@ import {ERC20} from "solmate/tokens/ERC20.sol";
 import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
+import {IMycBuyer} from "interfaces/IMycBuyer.sol";
 
 import "forge-std/console.sol";
 
@@ -20,6 +21,7 @@ contract LentMyc is ERC20 {
     /// @custom:invariant After updateUser is called, the user should have their shares balance increased by `deposit_asset_amount * total_share_supply / total_assets`, or by `deposit_asset_amount` if `total_share_supply = 0`.
     ///                   where `deposit_asset_amount` is the amount of MYC they have deposited in a previous cycle.
 
+    /// TODO UPDATE THESE TWO INVARIANTS TO REFLECT THE FACT THAT REWARDS ARE NOW IN ETH, NOT MYC
     /// @custom:invariant At end of any newCycle call, `totalSupply` AND `cycleSharesAndAssets[cycle]._totalSupply` should equal `x + y - z`,
     ///                   where
     ///                       x = totalSupply at the start of the previous cycle.
@@ -31,7 +33,6 @@ contract LentMyc is ERC20 {
     ///                       z = the total amount of shares burnt since the start of the previous cycle.
 
     /// @custom:invariant At the end of any newCycle call, `totalAssets` AND `cycleSharesAndAssets[cycle]._totalAssets` should equal `a + b + c - d`,
-    /// TODO UPDATE THESE TWO INVARIANTS TO REFLECT THE FACT THAT REWARDS ARE NOW IN ETH, NOT MYC
     ///                   where
     ///                       a = totalAssets at the start of the previous cycle.
     ///                       b = the total amount of MYC deposited since the start of the previous cycle.
@@ -55,6 +56,10 @@ contract LentMyc is ERC20 {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Emitted when the `mycBuyer` contract is changed.
+    event SetMycBuyer(address oldMycBuyer, address newMycBuyer);
+    /// @notice Emitted when the contract is either paused or unpaused.
+    event Pause(bool paused);
     /// @notice Emitted when depositCap is changed.
     event SetDepositCap(uint256 depositCap, uint256 newDepositCap);
     /// @notice Emitted when the preCycleTimelock is changed.
@@ -86,6 +91,8 @@ contract LentMyc is ERC20 {
                                 STORAGE
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice The address of the IMycBuyer contract
+    address public mycBuyer;
     /// @notice True if deposits/withdrawals/compounds are paused.
     bool paused;
     /// @notice A permissioned address to change parameters, and start new cycle/set rewards.
@@ -139,6 +146,8 @@ contract LentMyc is ERC20 {
     /// @dev Every address defaults to 0 (false).
     /// TODO use as part of the claim in MYC and compound functions
     mapping(address => bool) public userClaimInMYC;
+    /// @notice If true, allow anyone to call `compound` for a given user.
+    mapping(address => bool) public userAutoCompound;
 
     /*//////////////////////////////////////////////////////////////
                                IMMUTABLES
@@ -214,28 +223,52 @@ contract LentMyc is ERC20 {
     }
 
     /**
+     * @notice Compounds ETH rewards back into MYC and deposits.
+     * @param user The user who is compounding.
+     * @param data Arbitrary bytes to pass to the IMycBuyer implementation.
+     */
+    function compound(address user, bytes memory data) external onlyUnpaused {
+        if (user != msg.sender) {
+            require(userAutoCompound[user], "User not auto-compounding");
+        }
+        uint256 claimAmount = _claim(address(this));
+        uint256 preBalance = asset.balanceOf(address(this));
+        uint256 mycAmount = IMycBuyer(mycBuyer).buyMyc(claimAmount, data);
+        uint256 postBalance = asset.balanceOf(address(this));
+        require(
+            postBalance - preBalance == mycAmount,
+            "buyMyc output doesn't match"
+        );
+        deposit(mycAmount, msg.sender);
+    }
+
+    // TODO set mycBuyer
+
+    /**
      * @notice Claim all outstanding ETH rewards.
-     * @dev Taken as the difference between user's cumulative ETH rewards, and their claimed ETH rewards.
      */
     function claim() external onlyUnpaused {
-        // TODO gas cost savings of storing userEthRewardsClaimed in mem
         updateUser(msg.sender);
+        emit Claimed(msg.sender, _claim(msg.sender));
+    }
+
+    /**
+     * @dev Claims ETH rewards, taken as the difference between user's cumulative ETH rewards, and their claimed ETH rewards.
+     */
+    function _claim(address claimant) private returns (uint256) {
         uint256 claimed = userEthRewardsClaimed[msg.sender]; // Save SLOAD
         uint256 cumulative = userCumulativeEthRewards[msg.sender]; // Save SLOAD
         uint256 ethRewards = cumulative - claimed;
-        userEthRewardsClaimed[msg.sender] = cumulative;
-        Address.sendValue(payable(msg.sender), ethRewards);
-        emit Claimed(msg.sender, ethRewards);
+        userEthRewardsClaimed[claimant] = cumulative;
+        Address.sendValue(payable(claimant), ethRewards);
+        return ethRewards;
     }
 
     /**
      * @notice Requests a given number of MYC are deposited at the end of the current cycle.
      * @param assets Number of MYC to deposit.
-     * @param receiver The receiver of the lMYC. Must equal `msg.sender` (Exists for ERC4626-compliance).
      */
-    function deposit(uint256 assets, address receiver) external onlyUnpaused {
-        // We have a `receiver` parameter, but this is just to be semi-compliant to ERC4626.
-        require(msg.sender == receiver, "msg.sender != receiver");
+    function deposit(uint256 assets, address receiver) public onlyUnpaused {
         require(assets > 0, "assets == 0");
         // We are inside the 2 hour window: after users can deposit for next cycle, but before next cycle has started.
         require(
@@ -582,6 +615,14 @@ contract LentMyc is ERC20 {
     /*//////////////////////////////////////////////////////////////
                                 SETTERS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Sets `mycBuyer`, the contract that does the ETH -> MYC swap on compound.
+     */
+    function setMycBuyer(address _mycBuyer) external onlyGov {
+        emit SetMycBuyer(mycBuyer, _mycBuyer);
+        mycBuyer = _mycBuyer;
+    }
 
     function setPaused(bool _paused) external onlyGov {
         paused = _paused;
