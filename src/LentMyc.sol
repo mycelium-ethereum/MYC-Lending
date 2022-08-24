@@ -86,6 +86,8 @@ contract LentMyc is ERC20 {
                                 STORAGE
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice True if deposits/withdrawals/compounds are paused.
+    bool paused;
     /// @notice A permissioned address to change parameters, and start new cycle/set rewards.
     address public gov;
     /// @notice Governance transfer happens in two steps.
@@ -151,6 +153,10 @@ contract LentMyc is ERC20 {
         require(msg.sender == gov, "onlyGov");
         _;
     }
+    modifier onlyUnpaused() {
+        require(!paused, "paused");
+        _;
+    }
 
     /**
      * @dev Sets values, calls ERC20 constructor.
@@ -188,7 +194,7 @@ contract LentMyc is ERC20 {
      * @dev Transfers any lentMYC or MYC owing to `user`.
      * @dev Does not transfer ETH rewards. This has to be done by calling `claim`.
      */
-    function updateUser(address user) public {
+    function updateUser(address user) public onlyUnpaused {
         (uint256 shareTransfer, uint256 assetTransfer) = _updateUser(user);
         if (shareTransfer > 0) {
             delete latestPendingDeposit[user];
@@ -211,7 +217,7 @@ contract LentMyc is ERC20 {
      * @notice Claim all outstanding ETH rewards.
      * @dev Taken as the difference between user's cumulative ETH rewards, and their claimed ETH rewards.
      */
-    function claim() external {
+    function claim() external onlyUnpaused {
         // TODO gas cost savings of storing userEthRewardsClaimed in mem
         updateUser(msg.sender);
         uint256 claimed = userEthRewardsClaimed[msg.sender]; // Save SLOAD
@@ -227,7 +233,7 @@ contract LentMyc is ERC20 {
      * @param assets Number of MYC to deposit.
      * @param receiver The receiver of the lMYC. Must equal `msg.sender` (Exists for ERC4626-compliance).
      */
-    function deposit(uint256 assets, address receiver) external {
+    function deposit(uint256 assets, address receiver) external onlyUnpaused {
         // We have a `receiver` parameter, but this is just to be semi-compliant to ERC4626.
         require(msg.sender == receiver, "msg.sender != receiver");
         require(assets > 0, "assets == 0");
@@ -260,7 +266,7 @@ contract LentMyc is ERC20 {
         uint256 shares,
         address receiver,
         address owner
-    ) external {
+    ) external onlyUnpaused {
         // We want to be compliant with ERC4626, but only want msg.sender to be able to control their own assets.
         require(receiver == msg.sender, "receiver != msg.sender");
         require(owner == msg.sender, "owner != msg.sender");
@@ -278,6 +284,8 @@ contract LentMyc is ERC20 {
 
     // TODO currently, the "cycle" starts before the Tokemak cycle starts. Account for this, or mention in documentation.
     // TODO what happens if there are losses and there isn't enough MYC after pendingDeposits - mycLostLastCycle - redemptionAssets?
+
+    // TODO pause function
 
     /**
      * @notice Starts a new cycle. This involves updating totalAssets based on any MYC lost during cycle, withdrawing more MYC for this new cycle,
@@ -389,14 +397,6 @@ contract LentMyc is ERC20 {
     // TODO add interface
 
     /**
-     * @return The lentMYC balance of `user` after an account update.
-     */
-    function trueBalanceOf(address user) public view returns (uint256) {
-        (uint256 shareTransfer, ) = _updateUser(user);
-        return balanceOf[user] + shareTransfer;
-    }
-
-    /**
      * @dev Wrapper around `ERC20.transferFrom` which updates both `from` and `to` before receiving the transfer.
      * @dev Basically before doing any transfers, we want to make sure that the user is in an updated state.
      */
@@ -427,6 +427,14 @@ contract LentMyc is ERC20 {
     /*//////////////////////////////////////////////////////////////
                         FETCHING UPDATED STATE
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @return The lentMYC balance of `user` after an account update.
+     */
+    function trueBalanceOf(address user) public view returns (uint256) {
+        (uint256 shareTransfer, ) = _updateUser(user);
+        return balanceOf[user] + shareTransfer;
+    }
 
     /**
      * @notice Gets the updated ETH rewards entitled to a user.
@@ -574,6 +582,11 @@ contract LentMyc is ERC20 {
     /*//////////////////////////////////////////////////////////////
                                 SETTERS
     //////////////////////////////////////////////////////////////*/
+
+    function setPaused(bool _paused) external onlyGov {
+        paused = _paused;
+        emit Pause(_paused);
+    }
 
     /**
      * @notice Sets the amount of MYC that can be deposited into the contract.
