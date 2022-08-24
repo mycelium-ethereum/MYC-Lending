@@ -5,6 +5,8 @@ firstCycleStart="1661235795"
 preCycleTimelock="60"
 depositCap="100000000000000000000000"
 
+forge build
+
 mycTokenOutput=$(forge create --rpc-url $RPC_URL --constructor-args "Mycelium" "MYC" "18" --private-key $PRIVATE_KEY src/Myc.sol:Myc)
 arr=($mycTokenOutput)
 myc=${arr[9]}
