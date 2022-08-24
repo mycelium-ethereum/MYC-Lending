@@ -235,14 +235,13 @@ contract LentMyc is ERC20 {
         }
         updateUser(user);
         uint256 claimAmount = _claim(user);
+        require(claimAmount > 0, "No rewards claimed");
         uint256 preBalance = asset.balanceOf(address(this));
         uint256 mycAmount = IMycBuyer(mycBuyer).buyMyc{value: claimAmount}(
             data
         );
         uint256 postBalance = asset.balanceOf(address(this));
-        if (mycAmount == 0) {
-            return;
-        }
+        require(mycAmount > 0, "mycAmount == 0");
         require(
             postBalance - preBalance == mycAmount,
             "buyMyc output doesn't match"

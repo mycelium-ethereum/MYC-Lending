@@ -56,8 +56,8 @@ contract E2E is Test {
     ) public {
         /*
     function testE2E() public {
-        uint256 depositAmount = 3000000000000000001;
-        uint256 lossAmount = 0;
+        uint256 depositAmount = 26;
+        uint256 lossAmount = 22;
         uint256 rewardAmount = 1;
         */
         vm.assume(depositAmount > lossAmount);
@@ -237,7 +237,12 @@ contract E2E is Test {
             mycLend.getClaimableAmount(users.user3) * mycBuyer.exchangeRate()
         );
         claimableAmount = mycLend.getClaimableAmount(users.user3);
-        mycLend.compound(users.user3, "");
+        if (claimableAmount > 0) {
+            mycLend.compound(users.user3, "");
+        } else {
+            vm.expectRevert("No rewards claimed");
+            mycLend.compound(users.user3, "");
+        }
 
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
