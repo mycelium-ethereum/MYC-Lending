@@ -54,12 +54,6 @@ contract E2E is Test {
         uint256 lossAmount,
         uint256 rewardAmount
     ) public {
-        /*
-    function testE2E() public {
-        uint256 depositAmount = 26;
-        uint256 lossAmount = 22;
-        uint256 rewardAmount = 1;
-        */
         vm.assume(depositAmount > lossAmount);
         // Div 3 because we have to send to two other users too
         vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
