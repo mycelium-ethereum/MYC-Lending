@@ -10,10 +10,19 @@ import {IMycBuyer} from "interfaces/IMycBuyer.sol";
 contract DummyMycBuyer is IMycBuyer {
     // 1 ETH = `exchangeRate` MYC
     uint256 public exchangeRate = 10000;
+    ERC20 public myc;
 
-    function buyMyc(bytes calldata data)
-        external
-        payable
-        returns (uint256 mycOut)
-    {}
+    constructor(address _myc) {
+        myc = ERC20(_myc);
+    }
+
+    /**
+     * @notice JUST A DUMMY FUNCTION -> not a real implementation.
+     */
+    function buyMyc(bytes calldata data) external payable returns (uint256) {
+        uint256 mycOut = msg.value * exchangeRate;
+        require(myc.balanceOf(address(this)) >= mycOut, "Not enough balance");
+        myc.transfer(msg.sender, mycOut);
+        return mycOut;
+    }
 }
