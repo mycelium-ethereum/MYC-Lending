@@ -5,11 +5,13 @@ import "forge-std/Test.sol";
 import {LentMyc} from "src/LentMyc.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Myc} from "src/Myc.sol";
+import {DummyMycBuyer} from "src/DummyMycBuyer.sol";
 
 contract E2E is Test {
     using FixedPointMathLib for uint256;
     LentMyc mycLend;
     Myc myc;
+    DummyMycBuyer mycBuyer;
     address constant FORGE_DEPLOYER =
         0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
     uint256 constant EIGHT_DAYS = 60 * 60 * 24 * 8;
@@ -35,6 +37,10 @@ contract E2E is Test {
             TWO_HOURS,
             depositCap
         );
+
+        mycBuyer = new DummyMycBuyer(address(myc));
+        // Set mycBuyer
+        mycLend.setMycBuyer(address(mycBuyer));
     }
 
     struct Users {
@@ -48,13 +54,16 @@ contract E2E is Test {
         uint256 lossAmount,
         uint256 rewardAmount
     ) public {
+        /*
+    function testE2E() public {
+        uint256 depositAmount = 3000000000000000001;
+        uint256 lossAmount = 0;
+        uint256 rewardAmount = 1;
+        */
         vm.assume(depositAmount > lossAmount);
         // Div 3 because we have to send to two other users too
-        vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 3);
-        vm.assume(rewardAmount < address(this).balance / 2);
-
-        // uint256 rewardAmount = 3 * 10**15; // 0.003 ETH
-        // uint256 lossAmount = 20 * 10**18; // 20 MYC
+        vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
+        vm.assume(rewardAmount < depositCap / 10000);
         // Stack too deep :(
         Users memory users = Users({
             user: address(123),
@@ -110,21 +119,21 @@ contract E2E is Test {
         );
 
         // Test claiming
-        uint256 ethBalanceBefore = address(this).balance;
+        uint256 balanceBefore = address(this).balance;
         uint256 userEthBalanceBefore = users.user.balance;
         mycLend.claim();
         vm.prank(users.user);
         mycLend.claim();
-        assertEq(ethBalanceBefore + claimableAmount1, address(this).balance);
+        assertEq(balanceBefore + claimableAmount1, address(this).balance);
         assertEq(userEthBalanceBefore + claimableAmount2, users.user.balance);
 
         assertEq(mycLend.getClaimableAmount(address(this)), 0);
         assertEq(mycLend.getClaimableAmount(users.user), 0);
 
         // Claiming should now do nothing
-        uint256 balBefore = address(this).balance;
+        balanceBefore = address(this).balance;
         mycLend.claim();
-        assertEq(address(this).balance, balBefore);
+        assertEq(address(this).balance, balanceBefore);
 
         // Test loss amount
         vm.warp(block.timestamp + EIGHT_DAYS);
@@ -186,7 +195,7 @@ contract E2E is Test {
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
-        uint256 balanceBefore = myc.balanceOf(address(this));
+        balanceBefore = myc.balanceOf(address(this));
         mycLend.updateUser(address(this));
         assertEq(
             balanceBefore + expectedRedeemAmount,
@@ -196,23 +205,50 @@ contract E2E is Test {
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
-        uint256 balanceOf = mycLend.trueBalanceOf(users.user);
+        balanceBefore = mycLend.trueBalanceOf(users.user);
         vm.prank(users.user);
-        mycLend.transfer(users.user3, balanceOf);
+        mycLend.transfer(users.user3, balanceBefore);
 
-        assertEq(mycLend.balanceOf(users.user3), balanceOf);
-        assertEq(mycLend.trueBalanceOf(users.user3), balanceOf);
+        assertEq(mycLend.balanceOf(users.user3), balanceBefore);
+        assertEq(mycLend.trueBalanceOf(users.user3), balanceBefore);
 
         uint256 claimableAmount3 = mycLend.getClaimableAmount(users.user3);
         uint256 claimableAmount = mycLend.getClaimableAmount(users.user);
         assertEq(claimableAmount3, 0);
         uint256 user3BalanceBefore = users.user3.balance;
-        uint256 userBalanceBefore = users.user.balance;
+        balanceBefore = users.user.balance;
         vm.prank(users.user3);
         mycLend.claim();
         vm.prank(users.user);
         mycLend.claim();
         assertEq(users.user3.balance, user3BalanceBefore + claimableAmount3);
-        assertEq(users.user.balance, userBalanceBefore + claimableAmount);
+        assertEq(users.user.balance, balanceBefore + claimableAmount);
+
+        balanceBefore = mycLend.trueBalanceOf(users.user3);
+        // Set user compounding
+        vm.prank(users.user3);
+        mycLend.setUserAutoCompound(true);
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        mycLend.updateUser(users.user3);
+        // Give the mycBuyer enough to swap ETH -> MYC
+        myc.transfer(
+            address(mycBuyer),
+            mycLend.getClaimableAmount(users.user3) * mycBuyer.exchangeRate()
+        );
+        claimableAmount = mycLend.getClaimableAmount(users.user3);
+        mycLend.compound(users.user3, "");
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle(0, 0);
+
+        // True balance should equal the balance before, plus the shares gained from the compound.
+        assertEq(
+            mycLend.trueBalanceOf(users.user3),
+            balanceBefore +
+                mycLend.previewDeposit(
+                    claimableAmount * mycBuyer.exchangeRate()
+                )
+        );
     }
 }

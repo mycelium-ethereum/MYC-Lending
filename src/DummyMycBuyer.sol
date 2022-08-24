@@ -16,7 +16,9 @@ contract DummyMycBuyer is IMycBuyer {
     /**
      * @notice JUST A DUMMY FUNCTION -> not a real implementation.
      */
-    function buyMyc(bytes calldata data) external payable returns (uint256) {
+    function buyMyc(
+        bytes calldata /*data*/
+    ) external payable returns (uint256) {
         uint256 mycOut = msg.value * exchangeRate;
         require(myc.balanceOf(address(this)) >= mycOut, "Not enough balance");
         myc.transfer(msg.sender, mycOut);

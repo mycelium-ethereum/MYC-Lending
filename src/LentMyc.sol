@@ -7,8 +7,6 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {IMycBuyer} from "interfaces/IMycBuyer.sol";
 
-import "forge-std/console.sol";
-
 /**
  * @title MYC Lending contract
  * @author CalabashSquash
@@ -56,6 +54,10 @@ contract LentMyc is ERC20 {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice Emitted when the a user gets their position compounded.
+    event Compound(address user, uint256 ethAmount, uint256 mycAmount);
+    /// @notice Emitted when the a user changes whether they want to auto compound or not.
+    event SetUserAutoCompound(address user, bool autoCompound);
     /// @notice Emitted when the `mycBuyer` contract is changed.
     event SetMycBuyer(address oldMycBuyer, address newMycBuyer);
     /// @notice Emitted when the contract is either paused or unpaused.
@@ -218,7 +220,7 @@ contract LentMyc is ERC20 {
 
         // Get ETH rewards since last update
         uint256 newUserEthRewards = _updatedEthRewards(user);
-        userLastUpdated[user] = cycle;
+        userLastUpdated[user] = cycle - 1;
         userCumulativeEthRewards[user] += newUserEthRewards;
     }
 
@@ -231,38 +233,43 @@ contract LentMyc is ERC20 {
         if (user != msg.sender) {
             require(userAutoCompound[user], "User not auto-compounding");
         }
-        uint256 claimAmount = _claim(address(this));
+        updateUser(user);
+        uint256 claimAmount = _claim(user);
         uint256 preBalance = asset.balanceOf(address(this));
         uint256 mycAmount = IMycBuyer(mycBuyer).buyMyc{value: claimAmount}(
             data
         );
         uint256 postBalance = asset.balanceOf(address(this));
+        if (mycAmount == 0) {
+            return;
+        }
         require(
             postBalance - preBalance == mycAmount,
             "buyMyc output doesn't match"
         );
-        deposit(mycAmount, msg.sender);
-    }
+        _deposit(mycAmount, address(this), user);
 
-    // TODO set mycBuyer
+        emit Compound(user, claimAmount, mycAmount);
+    }
 
     /**
      * @notice Claim all outstanding ETH rewards.
      */
     function claim() external onlyUnpaused {
         updateUser(msg.sender);
-        emit Claimed(msg.sender, _claim(msg.sender));
+        uint256 ethRewards = _claim(msg.sender);
+        Address.sendValue(payable(msg.sender), ethRewards);
+        emit Claimed(msg.sender, ethRewards);
     }
 
     /**
      * @dev Claims ETH rewards, taken as the difference between user's cumulative ETH rewards, and their claimed ETH rewards.
      */
     function _claim(address claimant) private returns (uint256) {
-        uint256 claimed = userEthRewardsClaimed[msg.sender]; // Save SLOAD
-        uint256 cumulative = userCumulativeEthRewards[msg.sender]; // Save SLOAD
+        uint256 claimed = userEthRewardsClaimed[claimant]; // Save SLOAD
+        uint256 cumulative = userCumulativeEthRewards[claimant]; // Save SLOAD
         uint256 ethRewards = cumulative - claimed;
         userEthRewardsClaimed[claimant] = cumulative;
-        Address.sendValue(payable(claimant), ethRewards);
         return ethRewards;
     }
 
@@ -271,6 +278,14 @@ contract LentMyc is ERC20 {
      * @param assets Number of MYC to deposit.
      */
     function deposit(uint256 assets, address receiver) public onlyUnpaused {
+        _deposit(assets, msg.sender, receiver);
+    }
+
+    function _deposit(
+        uint256 assets,
+        address from,
+        address receiver
+    ) internal {
         require(assets > 0, "assets == 0");
         // We are inside the 2 hour window: after users can deposit for next cycle, but before next cycle has started.
         require(
@@ -285,7 +300,9 @@ contract LentMyc is ERC20 {
         latestPendingDeposit[receiver] = cycle;
         pendingDeposits += assets;
         userPendingDeposits[receiver] += assets;
-        asset.safeTransferFrom(receiver, address(this), assets);
+        if (from != address(this)) {
+            asset.safeTransferFrom(from, address(this), assets);
+        }
     }
 
     /**
@@ -362,8 +379,13 @@ contract LentMyc is ERC20 {
                 ];
 
             // Roll over dust
-            if (address(this).balance > currentCycleCumulativeEthRewards) {
-                dust = address(this).balance - currentCycleCumulativeEthRewards;
+            if (
+                address(this).balance >
+                currentCycleCumulativeEthRewards.mulWadUp(totalSupply)
+            ) {
+                dust =
+                    address(this).balance -
+                    currentCycleCumulativeEthRewards.mulWadUp(totalSupply);
             } else {
                 dust = 0;
             }
@@ -443,7 +465,10 @@ contract LentMyc is ERC20 {
         // TODO is it OK to only update before transferring? I'm sure it is, but need to ensure.
         updateUser(from);
         updateUser(to);
-        return super.transferFrom(from, to, amount);
+        bool ret = super.transferFrom(from, to, amount);
+        updateUser(msg.sender);
+        updateUser(to);
+        return ret;
     }
 
     /**
@@ -456,7 +481,10 @@ contract LentMyc is ERC20 {
     {
         updateUser(msg.sender);
         updateUser(to);
-        return super.transfer(to, amount);
+        bool ret = super.transfer(to, amount);
+        updateUser(msg.sender);
+        updateUser(to);
+        return ret;
     }
 
     /*//////////////////////////////////////////////////////////////
@@ -479,7 +507,7 @@ contract LentMyc is ERC20 {
     function _updatedEthRewards(address user) private view returns (uint256) {
         // Get ETH rewards since last update
         uint256 cycleLastUpdated = userLastUpdated[user];
-        if (cycleLastUpdated == 0 || cycleLastUpdated == cycle) {
+        if (cycleLastUpdated == cycle) {
             // First time, or already updated this cycle
             return 0;
         }
@@ -617,6 +645,14 @@ contract LentMyc is ERC20 {
     /*//////////////////////////////////////////////////////////////
                                 SETTERS
     //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Sets whether a given user would like to have their investment auto compounded.
+     */
+    function setUserAutoCompound(bool autoCompound) external {
+        userAutoCompound[msg.sender] = autoCompound;
+        emit SetUserAutoCompound(msg.sender, autoCompound);
+    }
 
     /**
      * @notice Sets `mycBuyer`, the contract that does the ETH -> MYC swap on compound.
