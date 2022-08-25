@@ -466,12 +466,9 @@ contract LentMyc is ERC20 {
         address to,
         uint256 amount
     ) public override returns (bool) {
-        // TODO is it OK to only update before transferring? I'm sure it is, but need to ensure.
         updateUser(from);
         updateUser(to);
         bool ret = super.transferFrom(from, to, amount);
-        updateUser(msg.sender);
-        updateUser(to);
         return ret;
     }
 
@@ -486,8 +483,6 @@ contract LentMyc is ERC20 {
         updateUser(msg.sender);
         updateUser(to);
         bool ret = super.transfer(to, amount);
-        updateUser(msg.sender);
-        updateUser(to);
         return ret;
     }
 
