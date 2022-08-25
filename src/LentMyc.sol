@@ -98,7 +98,7 @@ contract LentMyc is ERC20 {
     /// @notice The address of the IMycBuyer contract
     address public mycBuyer;
     /// @notice True if deposits/withdrawals/compounds are paused.
-    bool paused;
+    bool public paused;
     /// @notice A permissioned address to change parameters, and start new cycle/set rewards.
     address public gov;
     /// @notice Governance transfer happens in two steps.
