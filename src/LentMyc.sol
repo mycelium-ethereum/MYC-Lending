@@ -295,7 +295,9 @@ contract LentMyc is ERC20 {
             "Deposit requests locked"
         );
         require(
-            asset.balanceOf(address(this)) + assets <= depositCap,
+            asset.balanceOf(address(this)) +
+                (from == address(this) ? 0 : assets) <=
+                depositCap,
             "Deposit cap exceeded"
         );
         updateUser(receiver);
