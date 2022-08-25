@@ -156,6 +156,7 @@ contract LentMyc is ERC20 {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice The asset being managed by the vault (eg MYC).
+    // the asset being managed by the vault (eg MYC)
     ERC20 public immutable asset;
 
     /*//////////////////////////////////////////////////////////////
@@ -358,7 +359,7 @@ contract LentMyc is ERC20 {
         onlyGov
     {
         require(
-            block.timestamp > cycleStartTime + cycleLength - preCycleTimelock,
+            block.timestamp > cycleStartTime + cycleLength,
             "Starting cycle too early"
         );
         cycleStartTime = block.timestamp;
