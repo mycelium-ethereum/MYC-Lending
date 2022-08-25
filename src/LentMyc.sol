@@ -359,7 +359,7 @@ contract LentMyc is ERC20 {
         onlyGov
     {
         require(
-            block.timestamp > cycleStartTime + cycleLength,
+            block.timestamp > cycleStartTime + cycleLength - preCycleTimelock,
             "Starting cycle too early"
         );
         cycleStartTime = block.timestamp;
