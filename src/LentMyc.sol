@@ -7,8 +7,6 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {IMycBuyer} from "interfaces/IMycBuyer.sol";
 
-import "forge-std/console.sol";
-
 /**
  * @title MYC Lending contract
  * @author CalabashSquash
