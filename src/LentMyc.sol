@@ -156,7 +156,6 @@ contract LentMyc is ERC20 {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice The asset being managed by the vault (eg MYC).
-    // the asset being managed by the vault (eg MYC)
     ERC20 public immutable asset;
 
     /*//////////////////////////////////////////////////////////////
