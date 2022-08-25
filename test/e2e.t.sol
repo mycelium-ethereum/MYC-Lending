@@ -55,9 +55,9 @@ contract E2E is Test {
         uint256 rewardAmount
     ) public {
         vm.assume(depositAmount > lossAmount);
-        // Div 3 because we have to send to two other users too
+        // Div because we have to send to other users too
         vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
-        vm.assume(rewardAmount < depositCap / 10000);
+        vm.assume(rewardAmount < depositCap / 100000);
         // Stack too deep :(
         Users memory users = Users({
             user: address(123),
