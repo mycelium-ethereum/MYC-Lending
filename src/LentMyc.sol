@@ -7,6 +7,8 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {IMycBuyer} from "interfaces/IMycBuyer.sol";
 
+import "forge-std/console.sol";
+
 /**
  * @title MYC Lending contract
  * @author CalabashSquash
@@ -365,9 +367,9 @@ contract LentMyc is ERC20 {
             // Either way, we want to just add all msg.value to dust.
             // Note that this is an extreme edge case.
 
-            // TODO write a test where totalSuypply = 0, but rewards a high -> shoudl transfer over to next cycle
+            // TODO write a test where totalSuypply = 0, but rewards a high -> should transfer over to next cycle
             cycleCumulativeEthRewards[cycle] = 0;
-            dust = msg.value;
+            dust = address(this).balance;
         } else {
             uint256 ethPerShare = (msg.value + dust).divWadDown(totalSupply);
             cycleCumulativeEthRewards[cycle] =
