@@ -352,6 +352,7 @@ contract LentMyc is ERC20 {
      *      the call will fail.
      * @dev Ensures enough MYC balance in contract to pay out all pending redeems.
      * @dev Any losses incurred has to be denominated in MYC because we can't require users "pay back" their ETH rewards.
+     * @dev The amount of ETH to be distributed must be included in this transactions msg.value.
      */
     function newCycle(uint256 mycLostLastCycle, uint256 amountToWithdraw)
         external
