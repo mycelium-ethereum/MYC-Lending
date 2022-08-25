@@ -1,7 +1,7 @@
-ethRewards="0"
+ethRewards="100000000"
 lossAmount="0"
 withdrawAmount="0"
-mycLend="0x7707FDb2e8a05Af7889faa52670D35aae8970E74"
+mycLend="0xB6463D7E8Bf4d532C826Db8Ac6Ad41d525C4f72d"
 
 while :
 do

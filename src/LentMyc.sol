@@ -308,6 +308,7 @@ contract LentMyc is ERC20 {
             block.timestamp < cycleStartTime + cycleLength - preCycleTimelock,
             "Deposit requests locked"
         );
+        // TODO should not be using balance, but instead totalAssets
         require(
             asset.balanceOf(address(this)) +
                 (from == address(this) ? 0 : assets) <=
