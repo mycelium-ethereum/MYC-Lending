@@ -373,12 +373,9 @@ contract LentMyc is ERC20 {
             dust = address(this).balance;
         } else {
             uint256 ethPerShare = (msg.value + dust).divWadDown(totalSupply);
-            cycleCumulativeEthRewards[cycle] =
-                cycleCumulativeEthRewards[cycle - 1] +
+            uint256 currentCycleCumulativeEthRewards = cycleCumulativeEthRewards[cycle - 1] +
                 ethPerShare;
-            uint256 currentCycleCumulativeEthRewards = cycleCumulativeEthRewards[
-                    cycle
-                ];
+            cycleCumulativeEthRewards[cycle] = currentCycleCumulativeEthRewards;
 
             // Roll over dust
             if (
@@ -498,7 +495,7 @@ contract LentMyc is ERC20 {
 
     /**
      * @notice Gets the updated ETH rewards entitled to a user.
-     * @param user The address to get udpated ETH rewards
+     * @param user The address to get updated ETH rewards
      * @dev Does not update state/transfer ETH rewards.
      */
     function _updatedEthRewards(address user) private view returns (uint256) {
