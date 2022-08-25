@@ -13,7 +13,8 @@ contract MycLendDeposit is Test {
     uint256 EIGHT_DAYS = 60 * 60 * 24 * 8;
     uint256 FOUR_DAYS = EIGHT_DAYS / 2;
     uint256 TWO_HOURS = 60 * 60 * 2;
-    uint256 depositCap = 500 * 10**18;
+    uint256 constant INITIAL_MINT_AMOUNT = 1_000_000_000 * 10**18;
+    uint256 depositCap = INITIAL_MINT_AMOUNT;
 
     function setUp() public {
         vm.warp(EIGHT_DAYS);
@@ -58,15 +59,15 @@ contract MycLendDeposit is Test {
     /**
      * @notice After next cycle starts, you should get shares
      */
-    /*
-    function testInitialOneToOneRatio() public {
-        uint256 depositAmount = 100;
+    function testInitialOneToOneRatio(uint256 depositAmount) public {
+        vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
+        vm.assume(depositAmount > 0);
         myc.approve(address(mycLend), depositAmount);
         mycLend.deposit(depositAmount, FORGE_DEPLOYER);
 
         // Cycle time ended, start new cycle
         vm.warp(block.timestamp + FOUR_DAYS);
-        mycLend.newCycle(true, 0, 0);
+        mycLend.newCycle(0, 0);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit
         assertEq(mycLend.balanceOf(address(this)), 0);
