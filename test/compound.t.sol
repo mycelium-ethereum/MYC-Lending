@@ -12,8 +12,6 @@ contract Compound is Test {
     LentMyc mycLend;
     Myc myc;
     DummyMycBuyer mycBuyer;
-    address constant FORGE_DEPLOYER =
-        0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
     uint256 constant EIGHT_DAYS = 60 * 60 * 24 * 8;
     uint256 constant FOUR_DAYS = EIGHT_DAYS / 2;
     uint256 constant TWO_HOURS = 60 * 60 * 2;
@@ -42,12 +40,6 @@ contract Compound is Test {
         // Set mycBuyer
         mycLend.setMycBuyer(address(mycBuyer));
         myc.transfer(address(mycBuyer), 100 * 10**18);
-    }
-
-    struct Users {
-        address user;
-        address user2;
-        address user3;
     }
 
     function testCompoundAboveCap() public {

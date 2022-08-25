@@ -8,8 +8,6 @@ import {Myc} from "src/Myc.sol";
 contract MycLendDeposit is Test {
     LentMyc mycLend;
     Myc myc;
-    address constant FORGE_DEPLOYER =
-        0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
     uint256 EIGHT_DAYS = 60 * 60 * 24 * 8;
     uint256 FOUR_DAYS = EIGHT_DAYS / 2;
     uint256 TWO_HOURS = 60 * 60 * 2;
@@ -23,7 +21,7 @@ contract MycLendDeposit is Test {
         // Deploy a new lending contract with the cycle starting 4 days ago
         mycLend = new LentMyc(
             address(myc),
-            FORGE_DEPLOYER,
+            address(this),
             18,
             EIGHT_DAYS,
             block.timestamp - FOUR_DAYS,
@@ -52,7 +50,7 @@ contract MycLendDeposit is Test {
     function testInitialDepositNoImmediateTokens() public {
         uint256 depositAmount = 100;
         myc.approve(address(mycLend), depositAmount);
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
         assertEq(mycLend.balanceOf(address(this)), 0);
     }
 
@@ -63,7 +61,7 @@ contract MycLendDeposit is Test {
         vm.assume(depositAmount > 0);
         vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
         myc.approve(address(mycLend), depositAmount);
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
 
         // Cycle time ended, start new cycle
         vm.warp(block.timestamp + FOUR_DAYS);
@@ -86,9 +84,9 @@ contract MycLendDeposit is Test {
         uint256 depositAmount = 100;
         myc.approve(address(mycLend), depositAmount * 3);
         // Deposit 3 times
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
+        mycLend.deposit(depositAmount, address(this));
+        mycLend.deposit(depositAmount, address(this));
 
         // Cycle time ended, start new cycle
         vm.warp(block.timestamp + FOUR_DAYS);
@@ -108,7 +106,7 @@ contract MycLendDeposit is Test {
         myc.approve(address(mycLend), depositAmount);
         vm.warp(block.timestamp + FOUR_DAYS);
         vm.expectRevert("assets == 0");
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
     }
 
     /**
@@ -120,7 +118,7 @@ contract MycLendDeposit is Test {
         myc.approve(address(mycLend), depositAmount);
         vm.warp(block.timestamp + FOUR_DAYS);
         vm.expectRevert("Deposit requests locked");
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
     }
 
     /**
@@ -138,7 +136,7 @@ contract MycLendDeposit is Test {
         uint256 depositAmount = myc.balanceOf(address(this)) + 1;
         myc.approve(address(mycLend), depositAmount);
         vm.expectRevert(stdError.arithmeticError);
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
     }
 
     /**
@@ -149,7 +147,7 @@ contract MycLendDeposit is Test {
         uint256 depositAmount = 100;
         uint256 rewardAmount = 20;
         myc.approve(address(mycLend), depositAmount);
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
 
         // Cycle time ended, start new cycle
         vm.warp(block.timestamp + FOUR_DAYS);
@@ -172,7 +170,7 @@ contract MycLendDeposit is Test {
         uint256 depositAmount = 100;
         uint256 lossAmount = 20;
         myc.approve(address(mycLend), depositAmount);
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
 
         // Cycle time ended, start new cycle
         vm.warp(block.timestamp + FOUR_DAYS);
@@ -192,7 +190,7 @@ contract MycLendDeposit is Test {
         uint256 rewardAmount = 20;
         uint256 amountToWithdraw = 30;
         myc.approve(address(mycLend), depositAmount);
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
 
         // Cycle time ended, start new cycle. 0 rewards
         vm.warp(block.timestamp + FOUR_DAYS);
@@ -222,7 +220,7 @@ contract MycLendDeposit is Test {
         uint256 lossAmount = 20;
         uint256 amountToWithdraw = 30;
         myc.approve(address(mycLend), depositAmount);
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
 
         // Cycle time ended, start new cycle. 0 rewards
         vm.warp(block.timestamp + FOUR_DAYS);
@@ -253,7 +251,7 @@ contract MycLendDeposit is Test {
         uint256 rewardAmount = 30;
         uint256 amountToWithdraw = 30;
         myc.approve(address(mycLend), depositAmount);
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
 
         // Cycle time ended, start new cycle. 0 rewards
         vm.warp(block.timestamp + FOUR_DAYS);
@@ -291,7 +289,7 @@ contract MycLendDeposit is Test {
         address user = address(123);
         myc.transfer(user, depositAmount);
         myc.approve(address(mycLend), depositAmount);
-        mycLend.deposit(depositAmount, FORGE_DEPLOYER);
+        mycLend.deposit(depositAmount, address(this));
         vm.prank(user);
         myc.approve(address(mycLend), depositAmount);
         vm.prank(user);
