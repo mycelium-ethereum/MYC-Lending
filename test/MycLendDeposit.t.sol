@@ -60,8 +60,8 @@ contract MycLendDeposit is Test {
      * @notice After next cycle starts, you should get shares
      */
     function testInitialOneToOneRatio(uint256 depositAmount) public {
-        vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
         vm.assume(depositAmount > 0);
+        vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
         myc.approve(address(mycLend), depositAmount);
         mycLend.deposit(depositAmount, FORGE_DEPLOYER);
 
