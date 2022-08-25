@@ -44,42 +44,6 @@ contract Claiming is Test {
         myc.approve(address(mycLend), myc.balanceOf(address(this)));
     }
 
-    function testCanClaimWholeRewardAmountIfOnlyOneStaked(
-        uint256 depositAmount,
-        uint256 rewardAmount
-    ) public {
-        vm.assume(rewardAmount < depositCap);
-        vm.assume(depositAmount < myc.balanceOf(address(this)));
-        vm.assume(depositAmount > 0);
-        mycLend.deposit(depositAmount, address(this));
-        vm.warp(block.timestamp + EIGHT_DAYS);
-
-        mycLend.newCycle{value: rewardAmount}(0, 0);
-
-        uint256 preBalance = address(this).balance;
-        assertEq(mycLend.getClaimableAmount(address(this)), 0);
-        mycLend.claim();
-        uint256 postBalance = address(this).balance;
-        assertEq(postBalance, preBalance);
-
-        vm.warp(block.timestamp + EIGHT_DAYS);
-        mycLend.newCycle{value: rewardAmount}(0, 0);
-
-        preBalance = address(this).balance;
-        assertApproxEqAbs(
-            mycLend.getClaimableAmount(address(this)),
-            rewardAmount * 2,
-            mycLend.dust() + 1
-        );
-        mycLend.claim();
-        postBalance = address(this).balance;
-        assertApproxEqAbs(
-            postBalance - preBalance,
-            (rewardAmount * 2 - mycLend.dust()),
-            mycLend.dust() + 1
-        );
-    }
-
     function testCanClaimNthRewardAmountIfNStaked(
         uint256 depositAmount,
         uint256 rewardAmount,
