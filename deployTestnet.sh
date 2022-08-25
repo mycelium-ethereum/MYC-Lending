@@ -19,7 +19,7 @@ lentMycOutput=$(forge create --rpc-url $RPC_URL \
 echo "lentMycOutput: ${lentMycOutput}"
 
 arr2=($lentMycOutput)
-lMyc=${arr[9]}
+lMyc=${arr2[9]}
 
 echo " "
 echo "lentMYC deployed to address ${lMyc}"
