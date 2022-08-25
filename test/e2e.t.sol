@@ -113,9 +113,9 @@ contract E2E is Test {
         // Test claiming
         uint256 balanceBefore = address(this).balance;
         uint256 userEthBalanceBefore = users.user.balance;
-        mycLend.claim();
+        mycLend.claim(false, "");
         vm.prank(users.user);
-        mycLend.claim();
+        mycLend.claim(false, "");
         assertEq(balanceBefore + claimableAmount1, address(this).balance);
         assertEq(userEthBalanceBefore + claimableAmount2, users.user.balance);
 
@@ -124,7 +124,7 @@ contract E2E is Test {
 
         // Claiming should now do nothing
         balanceBefore = address(this).balance;
-        mycLend.claim();
+        mycLend.claim(false, "");
         assertEq(address(this).balance, balanceBefore);
 
         // Test loss amount
@@ -210,9 +210,9 @@ contract E2E is Test {
         uint256 user3BalanceBefore = users.user3.balance;
         balanceBefore = users.user.balance;
         vm.prank(users.user3);
-        mycLend.claim();
+        mycLend.claim(false, "");
         vm.prank(users.user);
-        mycLend.claim();
+        mycLend.claim(false, "");
         assertEq(users.user3.balance, user3BalanceBefore + claimableAmount3);
         assertEq(users.user.balance, balanceBefore + claimableAmount);
 

@@ -86,8 +86,8 @@ contract LentMyc is ERC20 {
     event Deposit(address depositor, uint256 amount);
     /// @notice Emitted when a user redeems.
     event Redeem(address redeemor, uint256 amount);
-    /// @notice Emitted when a user claims their ETH rewards.
-    event Claimed(address claimant, uint256 ethRewards);
+    /// @notice Emitted when a user claims their rewards.
+    event Claimed(address claimant, bool asMyc, uint256 rewards);
 
     /*//////////////////////////////////////////////////////////////
                                 STORAGE
@@ -235,6 +235,34 @@ contract LentMyc is ERC20 {
             require(userAutoCompound[user], "User not auto-compounding");
         }
         updateUser(user);
+        (uint256 mycAmount, uint256 ethAmount) = _claimAsMyc(user, data);
+        _deposit(mycAmount, address(this), user);
+
+        emit Compound(user, ethAmount, mycAmount);
+    }
+
+    /**
+     * @notice Claim all outstanding ETH rewards. Option to transfer to MYC.
+     * @param asMyc True if swapping to MYC. False if kept in ETH.
+     * @param data Arbitrary bytes to pass to the IMycBuyer implementation.
+     */
+    function claim(bool asMyc, bytes memory data) external onlyUnpaused {
+        updateUser(msg.sender);
+        uint256 rewards;
+        if (asMyc) {
+            (rewards, ) = _claimAsMyc(msg.sender, data);
+            asset.transfer(msg.sender, rewards);
+        } else {
+            rewards = _claim(msg.sender);
+            Address.sendValue(payable(msg.sender), rewards);
+        }
+        emit Claimed(msg.sender, asMyc, rewards);
+    }
+
+    function _claimAsMyc(address user, bytes memory data)
+        private
+        returns (uint256, uint256)
+    {
         uint256 claimAmount = _claim(user);
         require(claimAmount > 0, "No rewards claimed");
         uint256 preBalance = asset.balanceOf(address(this));
@@ -247,19 +275,7 @@ contract LentMyc is ERC20 {
             postBalance - preBalance == mycAmount,
             "buyMyc output doesn't match"
         );
-        _deposit(mycAmount, address(this), user);
-
-        emit Compound(user, claimAmount, mycAmount);
-    }
-
-    /**
-     * @notice Claim all outstanding ETH rewards.
-     */
-    function claim() external onlyUnpaused {
-        updateUser(msg.sender);
-        uint256 ethRewards = _claim(msg.sender);
-        Address.sendValue(payable(msg.sender), ethRewards);
-        emit Claimed(msg.sender, ethRewards);
+        return (mycAmount, claimAmount);
     }
 
     /**
@@ -373,8 +389,9 @@ contract LentMyc is ERC20 {
             dust = address(this).balance;
         } else {
             uint256 ethPerShare = (msg.value + dust).divWadDown(totalSupply);
-            uint256 currentCycleCumulativeEthRewards = cycleCumulativeEthRewards[cycle - 1] +
-                ethPerShare;
+            uint256 currentCycleCumulativeEthRewards = cycleCumulativeEthRewards[
+                    cycle - 1
+                ] + ethPerShare;
             cycleCumulativeEthRewards[cycle] = currentCycleCumulativeEthRewards;
 
             // Roll over dust
@@ -522,7 +539,7 @@ contract LentMyc is ERC20 {
      * @param user The address to get claimable ETH rewards for.
      * @return An ETH value.
      */
-    function getClaimableAmount(address user) external view returns (uint256) {
+    function getClaimableAmount(address user) public view returns (uint256) {
         uint256 newUserEthRewards = _updatedEthRewards(user);
         uint256 ethRewards = newUserEthRewards +
             userCumulativeEthRewards[user] -

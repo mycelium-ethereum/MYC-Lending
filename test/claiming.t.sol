@@ -72,7 +72,7 @@ contract Claiming is Test {
             address user = address(uint160(i + 10));
             uint256 preBalance = user.balance;
             assertEq(mycLend.getClaimableAmount(user), 0);
-            mycLend.claim();
+            mycLend.claim(false, "");
             uint256 postBalance = user.balance;
             assertEq(postBalance, preBalance);
         }
@@ -81,7 +81,6 @@ contract Claiming is Test {
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         for (uint256 i = 0; i < participants; i++) {
-            console.log("   ");
             address user = address(uint160(i + 10));
             // ADDRESS(THIS)
             uint256 preBalance = user.balance;
@@ -90,9 +89,8 @@ contract Claiming is Test {
                 (rewardAmount * 2) / participants,
                 mycLend.dust() + 1
             );
-            console.log("user: %s", user);
             vm.prank(user);
-            mycLend.claim();
+            mycLend.claim(false, "");
             uint256 postBalance = user.balance;
             assertApproxEqAbs(
                 postBalance - preBalance,
@@ -168,8 +166,8 @@ contract Claiming is Test {
 
         // Reset claimable rewards
         vm.prank(user);
-        mycLend.claim();
-        mycLend.claim();
+        mycLend.claim(false, "");
+        mycLend.claim(false, "");
 
         vm.prank(user);
         mycLend.deposit(depositAmount / split, user);
@@ -193,5 +191,76 @@ contract Claiming is Test {
             ),
             mycLend.dust() + 1
         );
+    }
+
+    /*
+    function testCanClaimETHNthRewardAmountIfNStaked(
+        uint256 depositAmount,
+        uint256 rewardAmount,
+        uint256 participants
+    ) public {
+        */
+    function testCanClaimETHNthRewardAmountIfNStaked() public {
+        uint256 depositAmount = 10;
+        uint256 rewardAmount = 11;
+        uint256 participants = 2;
+        vm.assume(rewardAmount < depositCap);
+        vm.assume(depositAmount < myc.balanceOf(address(this)) / 3);
+        vm.assume(depositAmount > 0);
+        vm.assume(participants < depositAmount);
+        // Limit to 2000 otherwise it sometimes takes too long
+        vm.assume(participants < 2000);
+
+        for (uint256 i = 0; i < participants; i++) {
+            address user = address(uint160(i + 10));
+
+            myc.transfer(user, depositAmount / participants);
+            vm.prank(user);
+            myc.approve(address(mycLend), depositAmount / participants);
+            vm.prank(user);
+            mycLend.deposit(depositAmount / participants, user);
+        }
+
+        myc.transfer(address(mycBuyer), myc.balanceOf(address(this)));
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        for (uint256 i = 0; i < participants; i++) {
+            address user = address(uint160(i + 10));
+            uint256 preBalance = myc.balanceOf(user);
+            assertEq(mycLend.getClaimableAmount(user), 0);
+            vm.expectRevert("No rewards claimed");
+            mycLend.claim(true, "");
+            uint256 postBalance = myc.balanceOf(user);
+            assertEq(postBalance, preBalance);
+        }
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        for (uint256 i = 0; i < participants; i++) {
+            address user = address(uint160(i + 10));
+            // ADDRESS(THIS)
+            uint256 preBalance = myc.balanceOf(user);
+            assertApproxEqAbs(
+                mycLend.getClaimableAmount(user),
+                (rewardAmount * 2) / participants,
+                mycLend.dust() + 1
+            );
+
+            if (mycLend.getClaimableAmount(user) == 0) {
+                vm.expectRevert("No rewards claimed");
+            }
+            vm.prank(user);
+            mycLend.claim(true, "");
+            uint256 postBalance = myc.balanceOf(user);
+            assertApproxEqAbs(
+                postBalance - preBalance,
+                ((rewardAmount * 2) / participants) * mycBuyer.exchangeRate(),
+                (mycLend.dust() + 1) * mycBuyer.exchangeRate()
+            );
+        }
     }
 }
