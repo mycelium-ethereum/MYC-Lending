@@ -26,13 +26,17 @@ echo " "
 echo "lentMYC deployed to address ${lMyc}"
 
 dummyMycBuyer=$(forge create --rpc-url $RPC_URL \
-    --constructor-args $myc \
+    --constructor-args $myc $gov \
     --private-key $PRIVATE_KEY src/DummyMycBuyer.sol:DummyMycBuyer)
 
 echo "dummyMycBuyer output: ${dummyMycBuyer}"
 
 arr3=($dummyMycBuyer)
 dummyMycBuyer=${arr3[9]}
+
+echo " "
+echo "setting mycBuyer"
+cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $lMyc "setMycBuyer(address)" $dummyMycBuyer
 
 echo " "
 echo "dummyMycBuyer deployed to address ${dummyMycBuyer}"

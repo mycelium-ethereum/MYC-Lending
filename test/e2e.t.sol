@@ -36,7 +36,7 @@ contract E2E is Test {
             depositCap
         );
 
-        mycBuyer = new DummyMycBuyer(address(myc));
+        mycBuyer = new DummyMycBuyer(address(myc), address(this));
         // Set mycBuyer
         mycLend.setMycBuyer(address(mycBuyer));
     }

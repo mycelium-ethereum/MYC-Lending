@@ -36,7 +36,7 @@ contract Compound is Test {
             depositCap
         );
 
-        mycBuyer = new DummyMycBuyer(address(myc));
+        mycBuyer = new DummyMycBuyer(address(myc), address(this));
         // Set mycBuyer
         mycLend.setMycBuyer(address(mycBuyer));
         myc.transfer(address(mycBuyer), 100 * 10**18);

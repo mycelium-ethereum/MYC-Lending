@@ -1,10 +1,9 @@
-mycLend="0x7707FDb2e8a05Af7889faa52670D35aae8970E74"
-
-echo "lentMYC.totalSupply: "
-echo "1"
-echo `cast call --rpc-url $RPC_URL $mycLend "totalSupply()"`
-echo "2"
-echo `cast call --rpc-url $RPC_URL $mycLend "totalAssets()"`
-echo "2"
-echo `cast call --rpc-url $RPC_URL $mycLend "preCycleTimelock()"`
-echo "3"
+echo "Total Supply: $(cast call --rpc-url $RPC_URL $LMYC "totalSupply()")"
+echo ""
+echo "totalAssets: $(cast call --rpc-url $RPC_URL $LMYC "totalAssets()")"
+echo ""
+preCycleTimelock=`cast call --rpc-url $RPC_URL $LMYC "preCycleTimelock()"`
+cycleStartTime=`cast call --rpc-url $RPC_URL $LMYC "cycleStartTime()"`
+cycleLength=`cast call --rpc-url $RPC_URL $LMYC "cycleLength()"`
+cycleWindowClose=$((cycleStartTime + cycleLength - preCycleTimelock))
+echo "Deposit window closing in approx $((cycleWindowClose - $(date +%s))) seconds."

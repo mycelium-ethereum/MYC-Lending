@@ -30,7 +30,7 @@ contract Redeem is Test {
         );
     }
 
-    function test1() public {
+    function testRedeemAfterManyDeposits() public {
         uint256 depositAmount = 100;
         uint256 rewardAmount = 10;
         address user = address(123);

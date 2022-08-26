@@ -36,7 +36,7 @@ contract Claiming is Test {
             depositCap
         );
 
-        mycBuyer = new DummyMycBuyer(address(myc));
+        mycBuyer = new DummyMycBuyer(address(myc), address(this));
         // Set mycBuyer
         mycLend.setMycBuyer(address(mycBuyer));
         myc.approve(address(mycLend), myc.balanceOf(address(this)));
