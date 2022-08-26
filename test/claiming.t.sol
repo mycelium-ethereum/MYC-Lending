@@ -47,7 +47,7 @@ contract Claiming is Test {
         uint256 rewardAmount,
         uint256 participants
     ) public {
-        vm.assume(depositAmount < depositCap / 2);
+        vm.assume(depositAmount < depositCap / 3);
         vm.assume(rewardAmount < depositCap / mycBuyer.exchangeRate());
         vm.assume(depositAmount < myc.balanceOf(address(this)) / 3);
         vm.assume(depositAmount > 0);
@@ -106,6 +106,7 @@ contract Claiming is Test {
         uint256 depositAmount
     ) public {
         vm.assume(depositAmount < myc.balanceOf(address(this)) / 2);
+        vm.assume(depositAmount < depositCap / 2);
         vm.assume(depositAmount > 0);
         vm.assume(split < depositAmount / 2);
         vm.assume(split > 1);

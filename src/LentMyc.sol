@@ -309,7 +309,7 @@ contract LentMyc is ERC20 {
             "Deposit requests locked"
         );
         require(
-            totalAssets + (from == address(this) ? 0 : assets) <= depositCap,
+            totalAssets + pendingDeposits + assets <= depositCap,
             "Deposit cap exceeded"
         );
         updateUser(receiver);
@@ -339,6 +339,7 @@ contract LentMyc is ERC20 {
         require(receiver == msg.sender, "receiver != msg.sender");
         require(owner == msg.sender, "owner != msg.sender");
         updateUser(msg.sender);
+        require(balanceOf[msg.sender] >= shares, "Not enough balance");
         if (block.timestamp > cycleStartTime + cycleLength - preCycleTimelock) {
             // We are inside the 2 hour window: after users can deposit for next cycle, but before next cycle has started.
             revert("Redeem requests locked");
@@ -411,7 +412,7 @@ contract LentMyc is ERC20 {
         totalAssets -= mycLostLastCycle;
         // TODO should redemptionAssets be calculated before or after the mint. 99% sure it should be after. But then how do you calculate totalAssets? Test to figure out.
         // TODO should redemptionAssets be calculated before or after totalAssets is updated?
-        uint256 redemptionAssets = previewRedeem(pendingRedeems);
+        uint256 redemptionAssets = previewRedeemNewCycle(pendingRedeems);
         _mint(address(this), previewDeposit(pendingDeposits));
         // Total assets should not reflect deposits and redeems
         if (pendingDeposits > redemptionAssets) {
@@ -629,6 +630,18 @@ contract LentMyc is ERC20 {
         returns (uint256)
     {
         uint256 supply = totalSupply;
+        return convertToAssets(shares, totalAssets, supply);
+    }
+
+    /**
+     * @dev Used in `newCycle`, because `totalSupply` is decremented as people redeem, so we need to add this back to totalSupply.
+     */
+    function previewRedeemNewCycle(uint256 shares)
+        private
+        view
+        returns (uint256)
+    {
+        uint256 supply = totalSupply + shares;
         return convertToAssets(shares, totalAssets, supply);
     }
 

@@ -5,7 +5,7 @@ import "forge-std/Test.sol";
 import {LentMyc} from "src/LentMyc.sol";
 import {Myc} from "src/Myc.sol";
 
-contract MycLendDeposit is Test {
+contract Deposit is Test {
     LentMyc mycLend;
     Myc myc;
     uint256 EIGHT_DAYS = 60 * 60 * 24 * 8;
@@ -138,9 +138,11 @@ contract MycLendDeposit is Test {
         uint256 lossAmount = 20;
         myc.approve(address(mycLend), depositAmount);
         mycLend.deposit(depositAmount, address(this));
+        vm.warp(block.timestamp + FOUR_DAYS);
+        mycLend.newCycle(0, 10);
 
         // Cycle time ended, start new cycle
-        vm.warp(block.timestamp + FOUR_DAYS);
+        vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(lossAmount, 10);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit

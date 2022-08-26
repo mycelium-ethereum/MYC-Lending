@@ -45,8 +45,8 @@ contract Compound is Test {
     function testCompoundAboveCap() public {
         uint256 depositAmount = 100 * 10**18;
         uint256 rewardAmount = 1 * 10**15;
-        mycLend.setDepositCap(100 * 10**18);
-        myc.approve(address(mycLend), depositAmount);
+        mycLend.setDepositCap(depositAmount);
+        myc.approve(address(mycLend), type(uint256).max);
         mycLend.deposit(depositAmount, address(this));
 
         vm.warp(block.timestamp + EIGHT_DAYS);
