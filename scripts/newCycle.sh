@@ -1,4 +1,4 @@
-ethRewards="100000000"
+ethRewards="10000000000000"
 lossAmount="0"
 withdrawAmount="0"
 mycLend="0xB6463D7E8Bf4d532C826Db8Ac6Ad41d525C4f72d"

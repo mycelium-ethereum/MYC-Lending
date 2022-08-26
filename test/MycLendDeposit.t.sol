@@ -79,7 +79,6 @@ contract MycLendDeposit is Test {
     /**
      * @notice After next cycle starts, you should get shares. If you deposit multiple times, you should get all of them.
      */
-    /*
     function testInitialOneToOneRatioWithMultipleDepositsInSameCycle() public {
         uint256 depositAmount = 100;
         myc.approve(address(mycLend), depositAmount * 3);
@@ -90,7 +89,7 @@ contract MycLendDeposit is Test {
 
         // Cycle time ended, start new cycle
         vm.warp(block.timestamp + FOUR_DAYS);
-        mycLend.newCycle(true, 0, 0);
+        mycLend.newCycle(0, 0);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit
         assertEq(mycLend.balanceOf(address(this)), 0);
@@ -112,7 +111,6 @@ contract MycLendDeposit is Test {
     /**
      * @notice When in the pre-cycle timelock, users' deposits should be locked.
      */
-    /*
     function testCannotDepositInPreCycleTimelock() public {
         uint256 depositAmount = 100;
         myc.approve(address(mycLend), depositAmount);
@@ -121,51 +119,20 @@ contract MycLendDeposit is Test {
         mycLend.deposit(depositAmount, address(this));
     }
 
-    /**
-     * @notice msg.sender should always equal receiver.
-     */
-    /*
-    function testCannotDepositsWhenMsgSenderNotReceiver() public {
-        uint256 depositAmount = 100;
-        myc.approve(address(mycLend), depositAmount);
-        vm.expectRevert("msg.sender != receiver");
-        mycLend.deposit(depositAmount, address(123));
-    }
-
     function testCannotDepositMoreThanBalance() public {
-        uint256 depositAmount = myc.balanceOf(address(this)) + 1;
-        myc.approve(address(mycLend), depositAmount);
-        vm.expectRevert(stdError.arithmeticError);
-        mycLend.deposit(depositAmount, address(this));
+        address user = address(123);
+        myc.transfer(user, 10000);
+        uint256 depositAmount = myc.balanceOf(user) + 1;
+        vm.prank(user);
+        myc.approve(address(mycLend), 10000000);
+        vm.expectRevert("TRANSFER_FROM_FAILED");
+        vm.prank(user);
+        mycLend.deposit(depositAmount, user);
     }
 
     /**
      * @notice After next cycle starts, you should get shares at 1:1 rate, even after tokens are taken
      */
-    /*
-    function testInitialOneToOneRatioAfterRewards() public {
-        uint256 depositAmount = 100;
-        uint256 rewardAmount = 20;
-        myc.approve(address(mycLend), depositAmount);
-        mycLend.deposit(depositAmount, address(this));
-
-        // Cycle time ended, start new cycle
-        vm.warp(block.timestamp + FOUR_DAYS);
-        mycLend.newCycle(true, rewardAmount, 0);
-
-        // Balance not yet updated, but trueBalanceOf should reflect deposit
-        assertEq(mycLend.balanceOf(address(this)), 0);
-        assertEq(mycLend.trueBalanceOf(address(this)), depositAmount);
-
-        // Update user and check balance
-        mycLend.updateUser(address(this));
-        assertEq(mycLend.balanceOf(address(this)), depositAmount);
-    }
-
-    /**
-     * @notice After next cycle starts, you should get shares at 1:1 rate, even after tokens are taken
-     */
-    /*
     function testInitialOneToOneRatioAfterLosses() public {
         uint256 depositAmount = 100;
         uint256 lossAmount = 20;
@@ -174,41 +141,11 @@ contract MycLendDeposit is Test {
 
         // Cycle time ended, start new cycle
         vm.warp(block.timestamp + FOUR_DAYS);
-        mycLend.newCycle(false, lossAmount, 10);
+        mycLend.newCycle(lossAmount, 10);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit
         assertEq(mycLend.balanceOf(address(this)), 0);
         assertEq(mycLend.trueBalanceOf(address(this)), depositAmount);
-
-        // Update user and check balance
-        mycLend.updateUser(address(this));
-        assertEq(mycLend.balanceOf(address(this)), depositAmount);
-    }
-
-    function testDepositRatioAfterRewards() public {
-        uint256 depositAmount = 100;
-        uint256 rewardAmount = 20;
-        uint256 amountToWithdraw = 30;
-        myc.approve(address(mycLend), depositAmount);
-        mycLend.deposit(depositAmount, address(this));
-
-        // Cycle time ended, start new cycle. 0 rewards
-        vm.warp(block.timestamp + FOUR_DAYS);
-        mycLend.newCycle(false, 0, 0);
-
-        // New cycle with rewards. Ratio should now be 1:1.2
-        vm.warp(block.timestamp + EIGHT_DAYS);
-        mycLend.newCycle(true, rewardAmount, amountToWithdraw);
-
-        // Balance not yet updated, but trueBalanceOf should reflect deposit
-        assertEq(mycLend.balanceOf(address(this)), 0);
-        // Still same amount of shares, but worth of those shares should go up
-        assertEq(mycLend.trueBalanceOf(address(this)), depositAmount);
-        // Because we are the only address to have entered, we are entitled to all the shares
-        assertEq(
-            mycLend.previewRedeem(mycLend.trueBalanceOf(address(this))),
-            depositAmount + rewardAmount
-        );
 
         // Update user and check balance
         mycLend.updateUser(address(this));
@@ -224,11 +161,11 @@ contract MycLendDeposit is Test {
 
         // Cycle time ended, start new cycle. 0 rewards
         vm.warp(block.timestamp + FOUR_DAYS);
-        mycLend.newCycle(false, 0, 0);
+        mycLend.newCycle(0, 0);
 
         // New cycle with rewards. Ratio should now be 1:0.8
         vm.warp(block.timestamp + EIGHT_DAYS);
-        mycLend.newCycle(false, lossAmount, amountToWithdraw);
+        mycLend.newCycle(lossAmount, amountToWithdraw);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit
         assertEq(mycLend.balanceOf(address(this)), 0);
@@ -255,15 +192,15 @@ contract MycLendDeposit is Test {
 
         // Cycle time ended, start new cycle. 0 rewards
         vm.warp(block.timestamp + FOUR_DAYS);
-        mycLend.newCycle(false, 0, 0);
+        mycLend.newCycle(0, 0);
 
         // New cycle with rewards. Ratio should now be 1:0.8
         vm.warp(block.timestamp + EIGHT_DAYS);
-        mycLend.newCycle(false, lossAmount, amountToWithdraw);
+        mycLend.newCycle(lossAmount, amountToWithdraw);
 
         // New cycle with rewards. Ratio should now be 1:0.8
         vm.warp(block.timestamp + EIGHT_DAYS);
-        mycLend.newCycle(true, rewardAmount, amountToWithdraw);
+        mycLend.newCycle{value: rewardAmount}(0, amountToWithdraw);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit
         assertEq(mycLend.balanceOf(address(this)), 0);
@@ -272,14 +209,13 @@ contract MycLendDeposit is Test {
         // Because we are the only address to have entered, we are entitled to all the shares
         assertEq(
             mycLend.previewRedeem(mycLend.trueBalanceOf(address(this))),
-            depositAmount + rewardAmount - lossAmount
+            depositAmount - lossAmount
         );
 
         // Update user and check balance
         mycLend.updateUser(address(this));
         assertEq(mycLend.balanceOf(address(this)), depositAmount);
     }
-    */
 
     function testDepositRatioAfterMultipleCyclesMultipleParticipants() public {
         uint256 depositAmount = 100;
