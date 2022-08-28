@@ -247,5 +247,16 @@ contract E2E is Test {
                     claimableAmount * mycBuyer.exchangeRate()
                 )
         );
+
+        mycLend.setPaused(true);
+
+        vm.expectRevert("paused");
+        mycLend.deposit(1, address(this));
+        vm.expectRevert("paused");
+        mycLend.redeem(1, address(this), address(this));
+        vm.expectRevert("paused");
+        mycLend.updateUser(address(this));
+        vm.expectRevert("paused");
+        mycLend.compound(address(this), "");
     }
 }
