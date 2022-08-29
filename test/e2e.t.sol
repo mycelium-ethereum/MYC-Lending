@@ -366,46 +366,25 @@ contract E2E is Test {
     }
 
     function testGetClaimableAmountE2E() public {
-        uint256 depositAmount = 1234;
-        uint256 lossAmount = 7;
-        uint256 rewardAmount = 7200;
-        vm.assume(depositAmount > lossAmount);
-        // Div because we have to send to other users too
-        vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
-        vm.assume(rewardAmount < depositCap / 100000);
-        // Stack too deep :(
-        Users memory users = Users({
-            user: address(123),
-            user2: address(1234),
-            user3: address(12345)
-        });
-
         myc.approve(address(mycLend), type(uint256).max);
         mycLend.deposit(1 * 10**18, address(this));
+
+        myc.transfer(address(123), 1 * 10**18);
+
+        vm.prank(address(123));
+        myc.approve(address(mycLend), type(uint256).max);
+        vm.prank(address(123));
+        mycLend.deposit(1 * 10**18, address(123));
 
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
+        vm.prank(address(123));
+        mycLend.redeem(1 * 10**18, address(123), address(123));
+
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle{value: 1 * 10**18}(0, 0);
-        vm.warp(block.timestamp + EIGHT_DAYS);
-        mycLend.newCycle{value: 1 * 10**18}(0, 0);
-
-        assertEq(mycLend.getClaimableAmount(address(this)), 2 * 10**18);
-
-        vm.warp(block.timestamp + EIGHT_DAYS);
-        mycLend.newCycle{value: 1 * 10**15}(0, 0);
-
-        mycLend.deposit(1 * 10**15, address(this));
-
-        for (uint256 i = 0; i < 100; i++) {
-            vm.warp(block.timestamp + EIGHT_DAYS);
-            mycLend.newCycle{value: 1 * 10**15}(0, 0);
-
-            assertEq(
-                mycLend.getClaimableAmount(address(this)),
-                2 * 10**18 + 1 * 10**15 * (i + 2)
-            );
-        }
+        assertEq(mycLend.getClaimableAmount(address(123)), 5 * 10**17);
+        assertEq(mycLend.getClaimableAmount(address(this)), 5 * 10**17);
     }
 }
