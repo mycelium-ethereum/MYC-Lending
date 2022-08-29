@@ -326,8 +326,7 @@ contract LentMyc is ERC20 {
         address owner
     ) external onlyUnpaused {
         // We want to be compliant with ERC4626, but only want msg.sender to be able to control their own assets.
-        require(receiver == msg.sender, "receiver != msg.sender");
-        require(owner == msg.sender, "owner != msg.sender");
+        require(receiver == owner == msg.sender, "Invalid msg sender");
         updateUser(msg.sender);
         require(balanceOf[msg.sender] >= shares, "Not enough balance");
         if (block.timestamp > cycleStartTime + cycleLength - preCycleTimelock) {
@@ -378,6 +377,8 @@ contract LentMyc is ERC20 {
             uint256 ethPerShare = (msg.value + dust).divWadDown(
                 totalSupply + _pendingRedeems
             );
+
+            // note: is it possible for totalSupply != 0 and cycle == 0? Doesn't seem so but worth a sanity check.
             uint256 currentCycleCumulativeEthRewards = cycleCumulativeEthRewards[
                     cycle - 1
                 ] + ethPerShare;
