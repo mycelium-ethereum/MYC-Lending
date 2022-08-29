@@ -349,6 +349,8 @@ contract LentMyc is ERC20 {
         );
         cycleStartTime = block.timestamp;
 
+        uint256 _pendingRedeems = pendingRedeems;
+
         ///
         // Calculate ETH rewards per share.
         ///
@@ -359,7 +361,9 @@ contract LentMyc is ERC20 {
             cycleCumulativeEthRewards[cycle] = 0;
             dust = address(this).balance;
         } else {
-            uint256 ethPerShare = (msg.value + dust).divWadDown(totalSupply);
+            uint256 ethPerShare = (msg.value + dust).divWadDown(
+                totalSupply + _pendingRedeems
+            );
             uint256 currentCycleCumulativeEthRewards = cycleCumulativeEthRewards[
                     cycle - 1
                 ] + ethPerShare;
@@ -384,17 +388,17 @@ contract LentMyc is ERC20 {
         // This allows us to update a user based on the ratios that their tokens were minted/burnt at.
         // We also need to add in pendingRedeems to accurately reflect the totalSupply.
         cycleSharesAndAssets[cycle] = CycleInfo({
-            _totalSupply: totalSupply + pendingRedeems,
+            _totalSupply: totalSupply + _pendingRedeems,
             _totalAssets: totalAssets
         });
 
         ///
         // Calculate state after deposits and redeems.
         ///
-        uint256 redemptionAssets = previewRedeemNewCycle(pendingRedeems);
+        uint256 redemptionAssets = previewRedeemNewCycle(_pendingRedeems);
         _mint(
             address(this),
-            previewDepositNewCycle(pendingDeposits, pendingRedeems)
+            previewDepositNewCycle(pendingDeposits, _pendingRedeems)
         );
         // Total assets should now reflect deposits and redeems.
         if (pendingDeposits > redemptionAssets) {
@@ -508,7 +512,9 @@ contract LentMyc is ERC20 {
             cycle - 1
         ];
         uint256 newUserEthRewards = (currentCumulativeEthRewards -
-            lastUpdatedEthRewards).mulWadDown(trueBalanceOf(user));
+            lastUpdatedEthRewards).mulWadDown(
+                trueBalanceOf(user) + userPendingRedeems[user]
+            );
         return newUserEthRewards;
     }
 
