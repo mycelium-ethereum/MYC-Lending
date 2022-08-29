@@ -323,11 +323,6 @@ contract LentMyc is ERC20 {
         emit Redeem(msg.sender, shares);
     }
 
-    // TODO currently, the "cycle" starts before the Tokemak cycle starts. Account for this, or mention in documentation.
-    // TODO what happens if there are losses and there isn't enough MYC after pendingDeposits - mycLostLastCycle - redemptionAssets?
-
-    // TODO pause function
-
     /**
      * @notice Starts a new cycle. This involves updating totalAssets based on any MYC lost during cycle, withdrawing more MYC for this new cycle,
      *         updating ETH rewards, minting new shares from last cycles deposits.
