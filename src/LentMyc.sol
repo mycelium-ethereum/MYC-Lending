@@ -418,6 +418,10 @@ contract LentMyc is ERC20 {
             _totalSupply: totalSupply + pendingRedeems,
             _totalAssets: totalAssets
         });
+
+        ///
+        // Calculate state after deposits and redeems.
+        ///
         uint256 redemptionAssets = previewRedeemNewCycle(pendingRedeems);
         _mint(
             address(this),
@@ -434,6 +438,7 @@ contract LentMyc is ERC20 {
         pendingRedeems = 0;
         pendingDeposits = 0;
 
+        // Transfer assets requested by gov
         asset.safeTransfer(msg.sender, amountToWithdraw);
         amountDeployed += amountToWithdraw;
 
