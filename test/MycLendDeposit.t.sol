@@ -19,14 +19,16 @@ contract Deposit is Test {
         myc = new Myc("Mycelium", "MYC", 18);
 
         // Deploy a new lending contract with the cycle starting 4 days ago
-        mycLend = new LentMyc(
+        mycLend = new LentMyc();
+        mycLend.initialize(
             address(myc),
             address(this),
-            18,
+            // 18,
             EIGHT_DAYS,
             block.timestamp - FOUR_DAYS,
             TWO_HOURS,
-            depositCap
+            depositCap,
+            address(mycLend)
         );
     }
 
@@ -125,7 +127,7 @@ contract Deposit is Test {
         uint256 depositAmount = myc.balanceOf(user) + 1;
         vm.prank(user);
         myc.approve(address(mycLend), 10000000);
-        vm.expectRevert("TRANSFER_FROM_FAILED");
+        vm.expectRevert(stdError.arithmeticError);
         vm.prank(user);
         mycLend.deposit(depositAmount, user);
     }

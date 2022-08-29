@@ -26,14 +26,16 @@ contract E2E is Test {
         myc = new Myc("Mycelium", "MYC", 18);
 
         // Deploy a new lending contract with the cycle starting 4 days ago
-        mycLend = new LentMyc(
+        mycLend = new LentMyc();
+        mycLend.initialize(
             address(myc),
             address(this),
-            18,
+            // 18,
             EIGHT_DAYS,
             block.timestamp - FOUR_DAYS,
             TWO_HOURS,
-            depositCap
+            depositCap,
+            address(mycLend)
         );
 
         mycBuyer = new DummyMycBuyer(address(myc), address(this));
@@ -282,41 +284,53 @@ contract E2E is Test {
             user2: address(1234),
             user3: address(12345)
         });
+        console.log(1);
 
         myc.transfer(users.user, depositAmount);
         myc.approve(address(mycLend), depositAmount);
         mycLend.deposit(depositAmount, address(this));
         vm.prank(users.user);
         myc.approve(address(mycLend), depositAmount);
+        console.log(2);
 
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
+        console.log(3);
 
         vm.prank(users.user);
         mycLend.deposit(depositAmount, users.user);
+        console.log(4);
 
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(lossAmount, 0);
 
+        console.log(5);
         assertEq(mycLend.totalAssets(), depositAmount * 2 - lossAmount);
+        console.log(6);
 
         uint256 expectedBal = depositAmount.mulDivDown(
             depositAmount,
             depositAmount - lossAmount
         );
 
+        console.log(7);
         assertEq(mycLend.trueBalanceOf(users.user), expectedBal);
+        console.log(70);
         mycLend.updateUser(users.user);
+        console.log(71);
         assertEq(mycLend.trueBalanceOf(address(this)), depositAmount);
+        console.log(8);
 
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
+        console.log(9);
 
         // Since we won't be changing the ratio (no losses), balance should be based off what the ratio is now.
         expectedBal = depositAmount.mulDivDown(
             mycLend.totalSupply(),
             mycLend.totalAssets()
         );
+        console.log(10);
 
         mycLend.redeem(
             mycLend.trueBalanceOf(address(this)),
@@ -349,5 +363,49 @@ contract E2E is Test {
         myc.approve(address(mycLend), depositAmount);
         vm.prank(users.user2);
         mycLend.deposit(depositAmount, users.user2);
+    }
+
+    function testGetClaimableAmountE2E() public {
+        uint256 depositAmount = 1234;
+        uint256 lossAmount = 7;
+        uint256 rewardAmount = 7200;
+        vm.assume(depositAmount > lossAmount);
+        // Div because we have to send to other users too
+        vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
+        vm.assume(rewardAmount < depositCap / 100000);
+        // Stack too deep :(
+        Users memory users = Users({
+            user: address(123),
+            user2: address(1234),
+            user3: address(12345)
+        });
+
+        myc.approve(address(mycLend), type(uint256).max);
+        mycLend.deposit(1 * 10**18, address(this));
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle(0, 0);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: 1 * 10**18}(0, 0);
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: 1 * 10**18}(0, 0);
+
+        assertEq(mycLend.getClaimableAmount(address(this)), 2 * 10**18);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: 1 * 10**15}(0, 0);
+
+        mycLend.deposit(1 * 10**15, address(this));
+
+        for (uint256 i = 0; i < 100; i++) {
+            vm.warp(block.timestamp + EIGHT_DAYS);
+            mycLend.newCycle{value: 1 * 10**15}(0, 0);
+
+            assertEq(
+                mycLend.getClaimableAmount(address(this)),
+                2 * 10**18 + 1 * 10**15 * (i + 2)
+            );
+        }
     }
 }

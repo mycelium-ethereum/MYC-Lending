@@ -19,14 +19,16 @@ contract Redeem is Test {
         myc = new Myc("Mycelium", "MYC", 18);
 
         // Deploy a new lending contract with the cycle starting 4 days ago
-        mycLend = new LentMyc(
+        mycLend = new LentMyc();
+        mycLend.initialize(
             address(myc),
             address(this),
-            18,
+            // 18,
             EIGHT_DAYS,
             block.timestamp - FOUR_DAYS,
             TWO_HOURS,
-            depositCap
+            depositCap,
+            address(mycLend)
         );
     }
 

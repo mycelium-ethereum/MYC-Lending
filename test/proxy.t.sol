@@ -6,8 +6,12 @@ import {LentMyc} from "src/LentMyc.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Myc} from "src/Myc.sol";
 import {DummyMycBuyer} from "src/DummyMycBuyer.sol";
+import {DummyUpgrade} from "src/DummyUpgrade.sol";
+import {UpgradeProxy} from "foundry-upgrades/utils/UpgradeProxy.sol";
 
-contract Claiming is Test {
+// import {ProxyType} from "foundry-upgrades/utils/DeployProxy.sol";
+
+contract Proxy is Test {
     using FixedPointMathLib for uint256;
     LentMyc mycLend;
     Myc myc;
@@ -18,6 +22,13 @@ contract Claiming is Test {
     uint256 constant INITIAL_MINT_AMOUNT = 1_000_000_000 * 10**18;
     uint256 constant depositCap = INITIAL_MINT_AMOUNT;
 
+    enum ProxyType {
+        UUPS,
+        BeaconProxy,
+        Beacon,
+        Transparent
+    }
+
     // So we can receive ETH rewards
     receive() external payable {}
 
@@ -25,8 +36,14 @@ contract Claiming is Test {
         vm.warp(EIGHT_DAYS);
         myc = new Myc("Mycelium", "MYC", 18);
 
+        UpgradeProxy deploy = new UpgradeProxy();
+
         // Deploy a new lending contract with the cycle starting 4 days ago
         mycLend = new LentMyc();
+        mycLend = LentMyc(
+            deploy.deployUupsProxy(address(mycLend), address(123123), "")
+        );
+
         mycLend.initialize(
             address(myc),
             address(this),
@@ -42,13 +59,26 @@ contract Claiming is Test {
         // Set mycBuyer
         mycLend.setMycBuyer(address(mycBuyer));
         myc.approve(address(mycLend), myc.balanceOf(address(this)));
+
+        DummyUpgrade dummyUpgrade = new DummyUpgrade();
+
+        deploy.upgrade(address(dummyUpgrade), address(123123), address(0));
+
+        vm.expectRevert("Deposit requests locked");
+        mycLend.deposit(1, address(this));
     }
 
-    function testCanClaimNthRewardAmountIfNStaked(
+    /*
+    function testCanClaimNthRewardAmountIfNStakedYeet(
         uint256 depositAmount,
         uint256 rewardAmount,
         uint256 participants
     ) public {
+        */
+    function testCanClaimNthRewardAmountIfNStakedYeet() public {
+        uint256 depositAmount = 5;
+        uint256 rewardAmount = 0;
+        uint256 participants = 1;
         vm.assume(depositAmount < depositCap / 3);
         vm.assume(rewardAmount < depositCap / mycBuyer.exchangeRate());
         vm.assume(depositAmount < myc.balanceOf(address(this)) / 3);

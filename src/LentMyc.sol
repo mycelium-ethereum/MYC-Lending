@@ -1,11 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
-import {ERC20} from "solmate/tokens/ERC20.sol";
-import {SafeTransferLib} from "solmate/utils/SafeTransferLib.sol";
+import {ERC20Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
+import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {IMycBuyer} from "interfaces/IMycBuyer.sol";
+import {Initializable} from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
+
+import "forge-std/console.sol";
+
+interface ISelfTransfer {
+    function selfTransfer(address to, uint256 amount) external returns (bool);
+}
 
 /**
  * @title MYC Lending contract
@@ -16,13 +24,13 @@ import {IMycBuyer} from "interfaces/IMycBuyer.sol";
  *          - You get your lMYC tokens at the end of the cycle, rather than instantly.
  * @dev A cycle can start whenever `gov` calls `newCycle`, as long as `block.timestamp > cycleStartTime + cycleLength - preCycleTimelock`.
  */
-contract LentMyc is ERC20 {
+contract LentMyc is ERC20Upgradeable {
     /// @custom:invariant `trueBalanceOf(user)` always equals what `balanceOf` equals immediately after a call to `updateUser(user)`.
     /// @custom:invariant After updateUser is called, there should be no deposits or withdrawals that were made in a cycle prior to the current one. i.e. they should be deleted.
     /// @custom:invariant After updateUser is called, the user should have their shares balance increased by `deposit_asset_amount * total_share_supply / total_assets`, or by `deposit_asset_amount` if `total_share_supply = 0`.
     ///                   where `deposit_asset_amount` is the amount of MYC they have deposited in a previous cycle.
 
-    using SafeTransferLib for ERC20;
+    using SafeERC20 for ERC20;
     using FixedPointMathLib for uint256;
 
     struct CycleInfo {
@@ -72,6 +80,8 @@ contract LentMyc is ERC20 {
                                 STORAGE
     //////////////////////////////////////////////////////////////*/
 
+    /// @notice The address of the base proxy storage contract.
+    address public proxy;
     /// @notice The address of the IMycBuyer contract
     address public mycBuyer;
     /// @notice True if deposits/withdrawals/compounds are paused.
@@ -134,13 +144,17 @@ contract LentMyc is ERC20 {
     //////////////////////////////////////////////////////////////*/
 
     /// @notice The asset being managed by the vault (eg MYC).
-    ERC20 public immutable asset;
+    ERC20 public asset;
 
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS
     //////////////////////////////////////////////////////////////*/
     modifier onlyGov() {
         require(msg.sender == gov, "onlyGov");
+        _;
+    }
+    modifier onlySelf() {
+        require(msg.sender == address(this), "onlySelf");
         _;
     }
     modifier onlyUnpaused() {
@@ -150,24 +164,26 @@ contract LentMyc is ERC20 {
 
     /**
      * @dev Sets values, calls ERC20 constructor.
-     * @dev Requires _decimals == myc.decimals()
      */
-    constructor(
+    function initialize(
         address _myc,
         address _gov,
-        uint8 _decimals,
         uint256 _cycleLength,
         uint256 _firstCycleStart,
         uint256 _preCycleTimelock,
-        uint256 _depositCap
-    ) ERC20("lentMYC", "lMYC", _decimals) {
+        uint256 _depositCap,
+        address _proxy
+    ) external initializer {
+        __ERC20_init("lentMYC", "lMYC");
         asset = ERC20(_myc);
-        require(asset.decimals() == _decimals, "Mismatching decimals");
         gov = _gov;
         cycleLength = _cycleLength;
         cycleStartTime = _firstCycleStart;
         preCycleTimelock = _preCycleTimelock;
         depositCap = _depositCap;
+        proxy = _proxy;
+        cycle = 1;
+        _approve(address(this), address(this), type(uint256).max);
         emit NewGov(address(0), _gov);
         emit SetCycleLength(0, _cycleLength);
         emit StartCycle(_firstCycleStart);
@@ -187,7 +203,7 @@ contract LentMyc is ERC20 {
         if (shareTransfer > 0) {
             delete latestPendingDeposit[user];
             delete userPendingDeposits[user];
-            selfTransfer(user, shareTransfer);
+            ISelfTransfer(proxy).selfTransfer(user, shareTransfer);
         }
         if (assetTransfer > 0) {
             delete latestPendingRedeem[user];
@@ -315,7 +331,7 @@ contract LentMyc is ERC20 {
         require(receiver == msg.sender, "receiver != msg.sender");
         require(owner == msg.sender, "owner != msg.sender");
         updateUser(msg.sender);
-        require(balanceOf[msg.sender] >= shares, "Not enough balance");
+        require(balanceOf(msg.sender) >= shares, "Not enough balance");
         if (block.timestamp > cycleStartTime + cycleLength - preCycleTimelock) {
             // We are inside the 2 hour window: after users can deposit for next cycle, but before next cycle has started.
             revert("Redeem requests locked");
@@ -352,14 +368,14 @@ contract LentMyc is ERC20 {
         ///
         // Calculate ETH rewards per share.
         ///
-        if (totalSupply == 0) {
+        if (totalSupply() == 0) {
             // Nobody has minted yet, that means this is most likely the first cycle.
             // Either way, we want to add all msg.value to dust.
             // Note: that this is an extreme edge case.
             cycleCumulativeEthRewards[cycle] = 0;
             dust = address(this).balance;
         } else {
-            uint256 ethPerShare = (msg.value + dust).divWadDown(totalSupply);
+            uint256 ethPerShare = (msg.value + dust).divWadDown(totalSupply());
             uint256 currentCycleCumulativeEthRewards = cycleCumulativeEthRewards[
                     cycle - 1
                 ] + ethPerShare;
@@ -368,11 +384,11 @@ contract LentMyc is ERC20 {
             // Roll over dust
             if (
                 address(this).balance >
-                currentCycleCumulativeEthRewards.mulWadUp(totalSupply)
+                currentCycleCumulativeEthRewards.mulWadUp(totalSupply())
             ) {
                 dust =
                     address(this).balance -
-                    currentCycleCumulativeEthRewards.mulWadUp(totalSupply);
+                    currentCycleCumulativeEthRewards.mulWadUp(totalSupply());
             } else {
                 dust = 0;
             }
@@ -384,7 +400,7 @@ contract LentMyc is ERC20 {
         // This allows us to update a user based on the ratios that their tokens were minted/burnt at.
         // We also need to add in pendingRedeems to accurately reflect the totalSupply.
         cycleSharesAndAssets[cycle] = CycleInfo({
-            _totalSupply: totalSupply + pendingRedeems,
+            _totalSupply: totalSupply() + pendingRedeems,
             _totalAssets: totalAssets
         });
 
@@ -472,6 +488,23 @@ contract LentMyc is ERC20 {
         require(!inPausedTransferMode, "Paused transfer mode");
         updateUser(msg.sender);
         updateUser(to);
+        return _transfer(to, amount);
+    }
+
+    /**
+     * @notice Transfer lentMYC *from* the lentMYC contract's ownership.
+     * @param to Recipient.
+     * @param amount Amount to transfer.
+     */
+    function selfTransfer(address to, uint256 amount)
+        external
+        onlySelf
+        returns (bool)
+    {
+        return _transfer(to, amount);
+    }
+
+    function _transfer(address to, uint256 amount) private returns (bool) {
         bool ret = super.transfer(to, amount);
         return ret;
     }
@@ -485,7 +518,7 @@ contract LentMyc is ERC20 {
      */
     function trueBalanceOf(address user) public view returns (uint256) {
         (uint256 shareTransfer, ) = _updateUser(user);
-        return balanceOf[user] + shareTransfer;
+        return balanceOf(user) + shareTransfer;
     }
 
     /**
@@ -598,7 +631,7 @@ contract LentMyc is ERC20 {
         virtual
         returns (uint256)
     {
-        uint256 supply = totalSupply;
+        uint256 supply = totalSupply();
         return convertToShares(assets, totalAssets, supply);
     }
 
@@ -610,7 +643,7 @@ contract LentMyc is ERC20 {
         view
         returns (uint256)
     {
-        uint256 supply = totalSupply + pendingShares;
+        uint256 supply = totalSupply() + pendingShares;
         return convertToShares(assets, totalAssets, supply);
     }
 
@@ -620,7 +653,7 @@ contract LentMyc is ERC20 {
         virtual
         returns (uint256)
     {
-        uint256 supply = totalSupply;
+        uint256 supply = totalSupply();
         return convertToAssets(shares, totalAssets, supply);
     }
 
@@ -632,27 +665,8 @@ contract LentMyc is ERC20 {
         view
         returns (uint256)
     {
-        uint256 supply = totalSupply + shares;
+        uint256 supply = totalSupply() + shares;
         return convertToAssets(shares, totalAssets, supply);
-    }
-
-    /**
-     * @notice Transfer lentMYC *from* the lentMYC contract's ownership.
-     * @param to Recipient.
-     * @param amount Amount to transfer.
-     */
-    function selfTransfer(address to, uint256 amount) private returns (bool) {
-        balanceOf[address(this)] -= amount;
-
-        // Cannot overflow because the sum of all user
-        // balances can't exceed the max uint256 value.
-        unchecked {
-            balanceOf[to] += amount;
-        }
-
-        emit Transfer(address(this), to, amount);
-
-        return true;
     }
 
     /*//////////////////////////////////////////////////////////////
