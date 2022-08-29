@@ -9,38 +9,18 @@ import {IMycBuyer} from "interfaces/IMycBuyer.sol";
 
 /**
  * @title MYC Lending contract
- * @author CalabashSquash
+ * @author CalabashSquash, with much inspiration from the solmate ERC4626 implementation.
  * @dev This contract is loosely compliant with ERC4626.
- * @dev // TODO list important differences to standard erc4626 implementations.
+ * @dev Main differences between this contract and ERC4626:
+ *          - There is no `mint` and `withdraw` function. This is because we don't know what the value of each share will be until the end of the cycle.
+ *          - You get your lMYC tokens at the end of the cycle, rather than instantly.
+ * @dev A cycle can start whenever `gov` calls `newCycle`, as long as `block.timestamp > cycleStartTime + cycleLength - preCycleTimelock`.
  */
 contract LentMyc is ERC20 {
     /// @custom:invariant `trueBalanceOf(user)` always equals what `balanceOf` equals immediately after a call to `updateUser(user)`.
     /// @custom:invariant After updateUser is called, there should be no deposits or withdrawals that were made in a cycle prior to the current one. i.e. they should be deleted.
     /// @custom:invariant After updateUser is called, the user should have their shares balance increased by `deposit_asset_amount * total_share_supply / total_assets`, or by `deposit_asset_amount` if `total_share_supply = 0`.
     ///                   where `deposit_asset_amount` is the amount of MYC they have deposited in a previous cycle.
-
-    /// TODO UPDATE THESE TWO INVARIANTS TO REFLECT THE FACT THAT REWARDS ARE NOW IN ETH, NOT MYC
-    /// @custom:invariant At end of any newCycle call, `totalSupply` AND `cycleSharesAndAssets[cycle]._totalSupply` should equal `x + y - z`,
-    ///                   where
-    ///                       x = totalSupply at the start of the previous cycle.
-    ///                       y = the total amount of shares minted since the start of previous cycle,
-    ///                           at the price `totalSupply / totalAssets`,
-    ///                           as of after the previous cycle's new rewards have been added,
-    ///                           and the totalSupply has been changed to reflect burning from redeems.
-    ///                           Or a price of 1, if `totalAssets = 0`,
-    ///                       z = the total amount of shares burnt since the start of the previous cycle.
-
-    /// @custom:invariant At the end of any newCycle call, `totalAssets` AND `cycleSharesAndAssets[cycle]._totalAssets` should equal `a + b + c - d`,
-    ///                   where
-    ///                       a = totalAssets at the start of the previous cycle.
-    ///                       b = the total amount of MYC deposited since the start of the previous cycle.
-    ///                       c = the total amount of yield generated during the previous cycle, in MYC token.
-    ///                       d = the total amount of assets withdrawn since the start of the previous cycle,
-    ///                           at the price `totalAssets / totalSupply`, after the previous cycle's new rewards have been added,
-    ///                           and the totalAssets has been changed to reflect new assets deposited during the cycle.
-    ///                           Or a price of 1, if `totalAssets = 0`,
-
-    // TODO more invariants
 
     using SafeTransferLib for ERC20;
     using FixedPointMathLib for uint256;
@@ -77,9 +57,6 @@ contract LentMyc is ERC20 {
     event CancelGovTransfer();
     /// @notice Emitted when a governance transfer has occurred.
     event NewGov(address oldGov, address newGov);
-    /// @notice Emitted when a user sets their `userClaimInMYC` value.
-    /// TODO use
-    event ClaimTokenSet(address user, bool claimInMYC);
     /// @notice Emitted when a new cycle has started.
     event StartCycle(uint256 cycleStartTime);
     /// @notice Emitted when a user deposits.
@@ -142,12 +119,9 @@ contract LentMyc is ERC20 {
     uint256 public dust;
     /// @notice The limit on the amount of MYC that can be deposited.
     uint256 public depositCap;
-    // TODO add upgradeable contract for compounding/dex swapping
 
     /// @notice If true, denominate a user's rewards in MYC. If false, denominate in ETH.
     /// @dev Every address defaults to 0 (false).
-    /// TODO use as part of the claim in MYC and compound functions
-    mapping(address => bool) public userClaimInMYC;
     /// @notice If true, allow anyone to call `compound` for a given user.
     mapping(address => bool) public userAutoCompound;
 
@@ -198,9 +172,7 @@ contract LentMyc is ERC20 {
     }
 
     // TODO cancel deposit/withdrawal request. Make sure can't do during 2 hour window
-    // TODO go through all functions and ensure correct permissions.
 
-    // TODO redeems aren't automatically sent out. Front-end needs a way to "claim" redeems (which would, in reality, just be calling updateUser).
     /**
      * @notice Updates a users lentMYC, MYC balances, and ETH rewards.
      * @dev Transfers any lentMYC or MYC owing to `user`.
@@ -459,8 +431,6 @@ contract LentMyc is ERC20 {
         amountDeployed -= amount;
     }
 
-    // TODO test can't start new cycle after heaps of losses
-
     /**
      * @notice Emergency ETH withdrawal function.
      */
@@ -475,8 +445,6 @@ contract LentMyc is ERC20 {
     function withdrawToken(address token, uint256 amount) external onlyGov {
         ERC20(token).safeTransfer(msg.sender, amount);
     }
-
-    // TODO add interface
 
     /**
      * @dev Wrapper around `ERC20.transferFrom` which updates both `from` and `to` before receiving the transfer.
@@ -767,5 +735,13 @@ contract LentMyc is ERC20 {
     function cancelGovTransfer() external onlyGov {
         pendingNewGov = address(0);
         emit CancelGovTransfer();
+    }
+
+    function maxRedeem(address owner) external view returns (uint256) {
+        return trueBalanceOf(owner);
+    }
+
+    function maxDeposit(address) external pure returns (uint256) {
+        return type(uint256).max;
     }
 }
