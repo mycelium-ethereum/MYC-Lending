@@ -190,8 +190,8 @@ contract E2E is Test {
         balanceBefore = myc.balanceOf(address(this));
         mycLend.updateUser(address(this));
         assertEq(
-            balanceBefore + expectedRedeemAmount,
-            myc.balanceOf(address(this))
+            myc.balanceOf(address(this)),
+            balanceBefore + expectedRedeemAmount
         );
 
         vm.warp(block.timestamp + EIGHT_DAYS);
@@ -258,5 +258,89 @@ contract E2E is Test {
         mycLend.updateUser(address(this));
         vm.expectRevert("paused");
         mycLend.compound(address(this), "");
+    }
+
+    function testE2E2(
+        uint256 depositAmount,
+        uint256 lossAmount,
+        uint256 rewardAmount
+    ) public {
+        vm.assume(depositAmount > lossAmount);
+        // Div because we have to send to other users too
+        vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
+        vm.assume(rewardAmount < depositCap / 100000);
+        // Stack too deep :(
+        Users memory users = Users({
+            user: address(123),
+            user2: address(1234),
+            user3: address(12345)
+        });
+
+        myc.transfer(users.user, depositAmount);
+        myc.approve(address(mycLend), depositAmount);
+        mycLend.deposit(depositAmount, address(this));
+        vm.prank(users.user);
+        myc.approve(address(mycLend), depositAmount);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle(0, 0);
+
+        vm.prank(users.user);
+        mycLend.deposit(depositAmount, users.user);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle(lossAmount, 0);
+
+        assertEq(mycLend.totalAssets(), depositAmount * 2 - lossAmount);
+
+        uint256 expectedBal = depositAmount.mulDivDown(
+            depositAmount,
+            depositAmount - lossAmount
+        );
+
+        assertEq(mycLend.trueBalanceOf(users.user), expectedBal);
+        mycLend.updateUser(users.user);
+        assertEq(mycLend.trueBalanceOf(address(this)), depositAmount);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle(0, 0);
+
+        // Since we won't be changing the ratio (no losses), balance should be based off what the ratio is now.
+        expectedBal = depositAmount.mulDivDown(
+            mycLend.totalSupply(),
+            mycLend.totalAssets()
+        );
+
+        mycLend.redeem(
+            mycLend.trueBalanceOf(address(this)),
+            address(this),
+            address(this)
+        );
+
+        myc.transfer(users.user3, depositAmount);
+        vm.prank(users.user3);
+        myc.approve(address(mycLend), depositAmount);
+        vm.prank(users.user3);
+        mycLend.deposit(depositAmount, users.user3);
+
+        uint256 preTotalSupply = mycLend.totalSupply();
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle(0, 0);
+
+        uint256 postTotalSupply = mycLend.totalSupply();
+
+        assertEq(
+            postTotalSupply,
+            preTotalSupply - mycLend.trueBalanceOf(address(this)) + expectedBal
+        );
+
+        assertEq(mycLend.trueBalanceOf(users.user3), expectedBal);
+
+        myc.transfer(users.user2, depositAmount);
+        vm.prank(users.user2);
+        myc.approve(address(mycLend), depositAmount);
+        vm.prank(users.user2);
+        mycLend.deposit(depositAmount, users.user2);
     }
 }

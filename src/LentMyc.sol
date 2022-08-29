@@ -7,6 +7,8 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {IMycBuyer} from "interfaces/IMycBuyer.sol";
 
+import "forge-std/console.sol";
+
 /**
  * @title MYC Lending contract
  * @author CalabashSquash
@@ -378,12 +380,13 @@ contract LentMyc is ERC20 {
         );
         cycleStartTime = block.timestamp;
 
-        // ETH per share
+        ///
+        // Calculate ETH rewards per share.
+        ///
         if (totalSupply == 0) {
             // Nobody has minted yet, that means this is most likely the first cycle.
-            // Either way, we want to just add all msg.value to dust.
-            // Note that this is an extreme edge case.
-
+            // Either way, we want to add all msg.value to dust.
+            // Note: that this is an extreme edge case.
             cycleCumulativeEthRewards[cycle] = 0;
             dust = address(this).balance;
         } else {
@@ -406,15 +409,21 @@ contract LentMyc is ERC20 {
             }
         }
 
-        cycle += 1;
-
-        // Don't want last cycles losses to affect new minters
+        // Don't want last cycles losses to affect new minters. They should mint at the new ratio.
         totalAssets -= mycLostLastCycle;
-        // TODO should redemptionAssets be calculated before or after the mint. 99% sure it should be after. But then how do you calculate totalAssets? Test to figure out.
-        // TODO should redemptionAssets be calculated before or after totalAssets is updated?
+        // The historic "price" of lMYC should be the MYC after losses, before the deposits and redeems.
+        // This allows us to update a user based on the ratios that their tokens were minted/burnt at.
+        // We also need to add in pendingRedeems to accurately reflect the totalSupply.
+        cycleSharesAndAssets[cycle] = CycleInfo({
+            _totalSupply: totalSupply + pendingRedeems,
+            _totalAssets: totalAssets
+        });
         uint256 redemptionAssets = previewRedeemNewCycle(pendingRedeems);
-        _mint(address(this), previewDeposit(pendingDeposits));
-        // Total assets should not reflect deposits and redeems
+        _mint(
+            address(this),
+            previewDepositNewCycle(pendingDeposits, pendingRedeems)
+        );
+        // Total assets should now reflect deposits and redeems.
         if (pendingDeposits > redemptionAssets) {
             totalAssets += pendingDeposits - redemptionAssets;
         } else if (pendingDeposits < redemptionAssets) {
@@ -424,13 +433,11 @@ contract LentMyc is ERC20 {
 
         pendingRedeems = 0;
         pendingDeposits = 0;
-        cycleSharesAndAssets[cycle] = CycleInfo({
-            _totalSupply: totalSupply,
-            _totalAssets: totalAssets
-        });
 
         asset.safeTransfer(msg.sender, amountToWithdraw);
         amountDeployed += amountToWithdraw;
+
+        cycle += 1;
 
         // Ensure after new cycle starts, enough is in contract to pay out the pending redemptions.
         require(
@@ -620,6 +627,18 @@ contract LentMyc is ERC20 {
         returns (uint256)
     {
         uint256 supply = totalSupply;
+        return convertToShares(assets, totalAssets, supply);
+    }
+
+    /**
+     * @dev Used in `newCycle`, because `totalSupply` is decremented as people redeem, so we need to add this back to totalSupply.
+     */
+    function previewDepositNewCycle(uint256 assets, uint256 pendingShares)
+        private
+        view
+        returns (uint256)
+    {
+        uint256 supply = totalSupply + pendingShares;
         return convertToShares(assets, totalAssets, supply);
     }
 
