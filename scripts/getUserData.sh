@@ -1,11 +1,13 @@
-address="0xc18fcFFD8c9173faB1684Ec1EEE32976f780B13E"
+address="0xE6F183a130D3a68Eb8Bf4314F3aA51f1d0013540"
 
 echo "lentMYC.totalSupply: "
 echo "1"
 deposits=`cast call --rpc-url $RPC_URL $LMYC "userPendingDeposits(address)" $address`
-echo $deposits
-printf "Pending Deposits: %d\n" $deposits
+printf "Pending Deposits: ${deposits}\n"
 redeems=`cast call --rpc-url $RPC_URL $LMYC "userPendingRedeems(address)" $address`
-printf "Pending Redeems: %d\n" $redeems
+printf "Pending Redeems: ${redeems}\n"
 claimable=`cast call --rpc-url $RPC_URL $LMYC "getClaimableAmount(address)" $address`
-printf "Claimable ETH: %d\n" $claimable
+printf "Claimable ETH: ${claimable}\n"
+
+trueBal=`cast call --rpc-url $RPC_URL $LMYC "trueBalanceOf(address)" $address`
+printf "True balance of: ${trueBal}\n"

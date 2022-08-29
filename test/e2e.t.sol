@@ -47,11 +47,17 @@ contract E2E is Test {
         address user3;
     }
 
+    /*
     function testE2E(
         uint256 depositAmount,
         uint256 lossAmount,
         uint256 rewardAmount
     ) public {
+        */
+    function testE2E() public {
+        uint256 depositAmount = 1234;
+        uint256 lossAmount = 7;
+        uint256 rewardAmount = 7200;
         vm.assume(depositAmount > lossAmount);
         // Div because we have to send to other users too
         vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
@@ -198,6 +204,7 @@ contract E2E is Test {
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         balanceBefore = mycLend.trueBalanceOf(users.user);
+        mycLend.setInPausedTransferMode(false);
         vm.prank(users.user);
         mycLend.transfer(users.user3, balanceBefore);
 

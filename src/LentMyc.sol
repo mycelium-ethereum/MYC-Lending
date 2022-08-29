@@ -42,6 +42,8 @@ contract LentMyc is ERC20 {
     event SetMycBuyer(address oldMycBuyer, address newMycBuyer);
     /// @notice Emitted when the contract is either paused or unpaused.
     event Pause(bool paused);
+    /// @notice Emitted when the contract is either put into pausedTransferMode or taken out of it.
+    event SetPausedTransferMode(bool _pausedTransferMode);
     /// @notice Emitted when depositCap is changed.
     event SetDepositCap(uint256 depositCap, uint256 newDepositCap);
     /// @notice Emitted when the preCycleTimelock is changed.
@@ -74,6 +76,8 @@ contract LentMyc is ERC20 {
     address public mycBuyer;
     /// @notice True if deposits/withdrawals/compounds are paused.
     bool public paused;
+    /// @notice True if transfers are paused.
+    bool public inPausedTransferMode = true;
     /// @notice A permissioned address to change parameters, and start new cycle/set rewards.
     address public gov;
     /// @notice Governance transfer happens in two steps.
@@ -450,6 +454,7 @@ contract LentMyc is ERC20 {
         address to,
         uint256 amount
     ) public override returns (bool) {
+        require(!inPausedTransferMode, "Paused transfer mode");
         updateUser(from);
         updateUser(to);
         bool ret = super.transferFrom(from, to, amount);
@@ -464,6 +469,7 @@ contract LentMyc is ERC20 {
         override
         returns (bool)
     {
+        require(!inPausedTransferMode, "Paused transfer mode");
         updateUser(msg.sender);
         updateUser(to);
         bool ret = super.transfer(to, amount);
@@ -667,6 +673,14 @@ contract LentMyc is ERC20 {
     function setMycBuyer(address _mycBuyer) external onlyGov {
         emit SetMycBuyer(mycBuyer, _mycBuyer);
         mycBuyer = _mycBuyer;
+    }
+
+    function setInPausedTransferMode(bool _pausedTransferMode)
+        external
+        onlyGov
+    {
+        inPausedTransferMode = _pausedTransferMode;
+        emit SetPausedTransferMode(_pausedTransferMode);
     }
 
     function setPaused(bool _paused) external onlyGov {
