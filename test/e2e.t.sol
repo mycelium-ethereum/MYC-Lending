@@ -350,4 +350,27 @@ contract E2E is Test {
         vm.prank(users.user2);
         mycLend.deposit(depositAmount, users.user2);
     }
+
+    function testGetClaimableAmountE2E() public {
+        myc.approve(address(mycLend), type(uint256).max);
+        mycLend.deposit(1 * 10**18, address(this));
+
+        myc.transfer(address(123), 1 * 10**18);
+
+        vm.prank(address(123));
+        myc.approve(address(mycLend), type(uint256).max);
+        vm.prank(address(123));
+        mycLend.deposit(1 * 10**18, address(123));
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle(0, 0);
+
+        vm.prank(address(123));
+        mycLend.redeem(1 * 10**18, address(123), address(123));
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: 1 * 10**18}(0, 0);
+        assertEq(mycLend.getClaimableAmount(address(123)), 5 * 10**17);
+        assertEq(mycLend.getClaimableAmount(address(this)), 5 * 10**17);
+    }
 }
