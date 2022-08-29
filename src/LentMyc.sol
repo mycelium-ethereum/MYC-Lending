@@ -184,6 +184,12 @@ contract LentMyc is ERC20 {
      */
     function updateUser(address user) public onlyUnpaused {
         (uint256 shareTransfer, uint256 assetTransfer) = _updateUser(user);
+
+        // Get ETH rewards since last update
+        uint256 newUserEthRewards = _updatedEthRewards(user);
+        userLastUpdated[user] = cycle - 1;
+        userCumulativeEthRewards[user] += newUserEthRewards;
+
         if (shareTransfer > 0) {
             delete latestPendingDeposit[user];
             delete userPendingDeposits[user];
@@ -194,11 +200,6 @@ contract LentMyc is ERC20 {
             delete userPendingRedeems[user];
             asset.safeTransfer(user, assetTransfer);
         }
-
-        // Get ETH rewards since last update
-        uint256 newUserEthRewards = _updatedEthRewards(user);
-        userLastUpdated[user] = cycle - 1;
-        userCumulativeEthRewards[user] += newUserEthRewards;
     }
 
     /**
@@ -239,6 +240,10 @@ contract LentMyc is ERC20 {
         private
         returns (uint256, uint256)
     {
+        // SECURITY: note that data is unchcked and passed in by external parties
+        // if a user has approved autoclaim, data here is unchcked data passed in BY ANYONE.
+        // we need to validate this somehow here.
+
         uint256 claimAmount = _claim(user);
         require(claimAmount > 0, "No rewards claimed");
         uint256 preBalance = asset.balanceOf(address(this));
@@ -285,9 +290,18 @@ contract LentMyc is ERC20 {
             "Deposit requests locked"
         );
         require(
+            // assets already owned by vault (both held here and lent out) + pending deposits + this deposit
             totalAssets + pendingDeposits + assets <= depositCap,
             "Deposit cap exceeded"
         );
+
+        // todo: do we need any validation if from === address(this)?
+        // could prevent a case where somehow an internal _deposit is depositing more MYC then held on contract
+        // this check could be stricter
+        if (from == address(this)) {
+            require(asset.balanceOf(address(this)) > assets, "deposit exceeds balance");
+        }
+
         updateUser(receiver);
         latestPendingDeposit[receiver] = cycle;
         pendingDeposits += assets;
