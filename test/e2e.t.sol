@@ -52,12 +52,6 @@ contract E2E is Test {
         uint256 lossAmount,
         uint256 rewardAmount
     ) public {
-        /*
-    function testE2E() public {
-        uint256 depositAmount = 1234;
-        uint256 lossAmount = 7;
-        uint256 rewardAmount = 7200;
-        */
         vm.assume(depositAmount > lossAmount);
         // Div because we have to send to other users too
         vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 4);
@@ -499,5 +493,28 @@ contract E2E is Test {
             rewardAmount.divWadDown(mycLend.totalSupply()).mulWadDown(1),
             0
         );
+    }
+
+    function testGetClaimableAmountSoleParticipant(uint256 rewardAmount)
+        public
+    {
+        vm.assume(rewardAmount < depositCap / 100000);
+        vm.assume(rewardAmount < address(this).balance / 3);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        myc.approve(address(mycLend), type(uint256).max);
+
+        mycLend.deposit(1 * 10**18, address(this));
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        mycLend.redeem(1 * 10**18, address(this), address(this));
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        assertEq(mycLend.getClaimableAmount(address(this)), rewardAmount * 4);
     }
 }

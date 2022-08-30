@@ -356,8 +356,9 @@ contract LentMyc is ERC20 {
         ///
         // Calculate ETH rewards per share.
         ///
-        if (totalSupply == 0) {
+        if (totalSupply + _pendingRedeems == 0) {
             // Nobody has minted yet, that means this is most likely the first cycle.
+            // Or, everyone has exited.
             // Either way, we want to add all msg.value to dust.
             // Note: that this is an extreme edge case.
             cycleCumulativeEthRewards[cycle] = 0;
