@@ -156,7 +156,6 @@ contract Claiming is Test {
             .divWadDown(mycLend.totalSupply())
             .mulWadDown(depositAmount);
 
-        console.log(1);
         assertApproxEqAbs(
             mycLend.getClaimableAmount(address(this)),
             expectedClaimable,
@@ -185,13 +184,11 @@ contract Claiming is Test {
                 mycLend.trueBalanceOf(address(this))
             );
 
-        console.log(1);
         assertApproxEqAbs(
             mycLend.getClaimableAmount(address(this)),
             expectedClaimable,
             mycLend.dust() + 15
         );
-        console.log(1);
 
         assertApproxEqAbs(
             mycLend.getClaimableAmount(user),
@@ -202,7 +199,6 @@ contract Claiming is Test {
             ),
             mycLend.dust() + 1
         );
-        console.log(1);
 
         assertApproxEqAbs(
             mycLend.getClaimableAmount(user),
@@ -222,18 +218,20 @@ contract Claiming is Test {
         vm.prank(user);
         mycLend.deposit(depositAmount / split, user);
 
+        uint256 dustSum = mycLend.dust();
+
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
+        dustSum += mycLend.dust();
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
+        dustSum += mycLend.dust();
         // Shouldn't get any rewards.
-        console.log(1);
-        assertApproxEqAbs(mycLend.getClaimableAmount(user), 0, mycLend.dust());
+        assertApproxEqAbs(mycLend.getClaimableAmount(user), 0, dustSum);
 
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
-        console.log(1);
         assertApproxEqAbs(
             mycLend.getClaimableAmount(user),
             (
