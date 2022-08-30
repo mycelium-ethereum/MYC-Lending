@@ -3,8 +3,6 @@ pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
 
-import "forge-std/console.sol";
-
 contract Myc is ERC20 {
     constructor(
         string memory _name,

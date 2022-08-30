@@ -380,6 +380,7 @@ contract E2E is Test {
     {
         address user = address(123);
         uint256 rewardAmount = 10000000000000;
+        rewardAmount2 = 13;
         vm.assume(rewardAmount2 < depositCap / 100000);
         vm.assume(rewardAmount2 < address(this).balance / 3);
 
@@ -481,7 +482,6 @@ contract E2E is Test {
             (rewardAmount)
                 .divWadDown(mycLend.totalSupply() + mycLend.pendingRedeems())
                 .mulWadDown(mycLend.trueBalanceOf(user));
-        console.log(expectedClaimable);
         assertApproxEqAbs(
             mycLend.getClaimableAmount(user),
             expectedClaimable,
@@ -515,6 +515,46 @@ contract E2E is Test {
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
-        assertEq(mycLend.getClaimableAmount(address(this)), rewardAmount * 4);
+        assertApproxEqAbs(
+            mycLend.getClaimableAmount(address(this)),
+            rewardAmount * 4,
+            mycLend.dust()
+        );
+    }
+
+    function testTemp() public {
+        uint256 rewardAmount = 10000000000000;
+        myc.transfer(
+            address(mycBuyer),
+            rewardAmount * 100 * mycBuyer.exchangeRate()
+        );
+        vm.assume(rewardAmount < depositCap / 100000);
+        vm.assume(rewardAmount < address(this).balance / 3);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        myc.approve(address(mycLend), type(uint256).max);
+
+        mycLend.deposit(1 * 10**18, address(this));
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        mycLend.redeem(1 * 10**17, address(this), address(this));
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        mycLend.compound(address(this), "");
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        mycLend.compound(address(this), "");
     }
 }

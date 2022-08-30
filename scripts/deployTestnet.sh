@@ -17,7 +17,7 @@ lentMycOutput=$(forge create --rpc-url $RPC_URL \
     --constructor-args $myc $gov $decimals $cycleLength $firstCycleStart $preCycleTimelock $depositCap \
     --private-key $PRIVATE_KEY src/LentMyc.sol:LentMyc)
 
-echo "lentMycOutput: ${lentMycOutput}"
+# echo "lentMycOutput: ${lentMycOutput}"
 
 arr2=($lentMycOutput)
 lMyc=${arr2[9]}
@@ -29,14 +29,14 @@ dummyMycBuyer=$(forge create --rpc-url $RPC_URL \
     --constructor-args $myc $gov \
     --private-key $PRIVATE_KEY src/DummyMycBuyer.sol:DummyMycBuyer)
 
-echo "dummyMycBuyer output: ${dummyMycBuyer}"
+# echo "dummyMycBuyer output: ${dummyMycBuyer}"
 
 arr3=($dummyMycBuyer)
 dummyMycBuyer=${arr3[9]}
 
 echo " "
 echo "setting mycBuyer"
-cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $lMyc "setMycBuyer(address)" $dummyMycBuyer
+a=`cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $lMyc "setMycBuyer(address)" $dummyMycBuyer`
 
 echo " "
 echo "dummyMycBuyer deployed to address ${dummyMycBuyer}"
@@ -44,18 +44,18 @@ echo "dummyMycBuyer deployed to address ${dummyMycBuyer}"
 # 100m
 balanceToTransfer="100000000000000000000000000"
 echo "Transferring ${balanceToTransfer} to the dummyMycBuyer"
-cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $myc "transfer(address,uint256)" $dummyMycBuyer $balanceToTransfer
+a=`cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $myc "transfer(address,uint256)" $dummyMycBuyer $balanceToTransfer`
 
 faucetOutput=$(forge create --rpc-url $RPC_URL \
     --constructor-args $myc \
     --private-key $PRIVATE_KEY src/TestnetFaucet.sol:TestnetFaucet)
-echo "faucet output: ${faucetOutput}"
+# echo "faucet output: ${faucetOutput}"
 arr4=($faucetOutput)
 faucet=${arr4[9]}
 echo " "
 echo "faucet deployed to address ${faucet}"
 
 echo "Transferring ${balanceToTransfer} to the faucet"
-cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $myc "transfer(address,uint256)" $faucet $balanceToTransfer
+a=`cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $myc "transfer(address,uint256)" $faucet $balanceToTransfer`
 
 # forge verify-contract ${lMyc} src/LentMyc.sol:LentMyc

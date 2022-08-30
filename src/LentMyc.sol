@@ -7,8 +7,6 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {IMycBuyer} from "interfaces/IMycBuyer.sol";
 
-import "forge-std/console.sol";
-
 /**
  * @title MYC Lending contract
  * @author CalabashSquash, with much inspiration from the solmate ERC4626 implementation.
@@ -378,19 +376,24 @@ contract LentMyc is ERC20 {
              * Calculating ETH Per share then multiplying by a user's shares is disobeying the "multiply before divide" rule,
              * and thus we lose precision. This is OK as long as we account for it and it isn't allowed to get too big.
              */
+
             if (
-                address(this).balance >
-                currentCycleCumulativeEthRewards.mulWadUp(
-                    totalSupply + _pendingRedeems
-                )
+                msg.value >
+                ethPerShare.mulWadDown(totalSupply + _pendingRedeems)
             ) {
-                dust =
-                    address(this).balance -
-                    currentCycleCumulativeEthRewards.mulWadUp(
-                        totalSupply + _pendingRedeems
-                    );
+                dust +=
+                    msg.value -
+                    ethPerShare.mulWadDown(totalSupply + _pendingRedeems);
             } else {
-                dust = 0;
+                uint256 diff = ethPerShare.mulWadDown(
+                    totalSupply + _pendingRedeems
+                ) - msg.value;
+                if (dust > diff && diff > 0) {
+                    dust -= diff;
+                } else {
+                    // msg.value == ethPerShare * totalSupply. Therefore, we can clear dust.
+                    dust = 0;
+                }
             }
         }
 
