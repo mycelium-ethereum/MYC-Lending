@@ -21,7 +21,7 @@ contract Proxy is Test {
     uint256 constant TWO_HOURS = 60 * 60 * 2;
     uint256 constant INITIAL_MINT_AMOUNT = 1_000_000_000 * 10**18;
     uint256 constant depositCap = INITIAL_MINT_AMOUNT;
-    address constant admin = address(1234);
+    address admin = address(this);
 
     // So we can receive ETH rewards
     receive() external payable {}
