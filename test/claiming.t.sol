@@ -17,6 +17,7 @@ contract Claiming is Test {
     uint256 constant TWO_HOURS = 60 * 60 * 2;
     uint256 constant INITIAL_MINT_AMOUNT = 1_000_000_000 * 10**18;
     uint256 constant depositCap = INITIAL_MINT_AMOUNT;
+    address constant admin = address(123);
 
     // So we can receive ETH rewards
     receive() external payable {}
@@ -35,7 +36,7 @@ contract Claiming is Test {
             block.timestamp - FOUR_DAYS,
             TWO_HOURS,
             depositCap,
-            address(mycLend)
+            admin
         );
 
         mycBuyer = new DummyMycBuyer(address(myc), address(this));

@@ -2,6 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {ERC20Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/ERC20Upgradeable.sol";
+import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
@@ -24,7 +25,7 @@ interface ISelfTransfer {
  *          - You get your lMYC tokens at the end of the cycle, rather than instantly.
  * @dev A cycle can start whenever `gov` calls `newCycle`, as long as `block.timestamp > cycleStartTime + cycleLength - preCycleTimelock`.
  */
-contract LentMyc is ERC20Upgradeable {
+contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
     /// @custom:invariant `trueBalanceOf(user)` always equals what `balanceOf` equals immediately after a call to `updateUser(user)`.
     /// @custom:invariant After updateUser is called, there should be no deposits or withdrawals that were made in a cycle prior to the current one. i.e. they should be deleted.
     /// @custom:invariant After updateUser is called, the user should have their shares balance increased by `deposit_asset_amount * total_share_supply / total_assets`, or by `deposit_asset_amount` if `total_share_supply = 0`.
@@ -42,9 +43,9 @@ contract LentMyc is ERC20Upgradeable {
                                  EVENTS
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice Emitted when the a user gets their position compounded.
+    /// @notice Emitted when a user gets their position compounded.
     event Compound(address user, uint256 ethAmount, uint256 mycAmount);
-    /// @notice Emitted when the a user changes whether they want to auto compound or not.
+    /// @notice Emitted when a user changes whether they want to auto compound or not.
     event SetUserAutoCompound(address user, bool autoCompound);
     /// @notice Emitted when the `mycBuyer` contract is changed.
     event SetMycBuyer(address oldMycBuyer, address newMycBuyer);
@@ -61,6 +62,12 @@ contract LentMyc is ERC20Upgradeable {
     );
     /// @notice Emitted when the cycle length is changed.
     event SetCycleLength(uint256 oldCycleLength, uint256 newCycleLength);
+    /// @notice Emitted when an admin transfer has been signalled.
+    event SignalSetAdmin(address _admin);
+    /// @notice Emitted when an admin transfer, previously in progress, is cancelled.
+    event CancelAdminTransfer();
+    /// @notice Emitted when an admin transfer has occurred.
+    event NewAdmin(address oldAdmin, address newAdmin);
     /// @notice Emitted when a governance transfer has been signalled.
     event SignalSetGov(address newGov);
     /// @notice Emitted when a governance transfer, previously in progress, is cancelled.
@@ -80,14 +87,16 @@ contract LentMyc is ERC20Upgradeable {
                                 STORAGE
     //////////////////////////////////////////////////////////////*/
 
-    /// @notice The address of the base proxy storage contract.
-    address public proxy;
     /// @notice The address of the IMycBuyer contract
     address public mycBuyer;
     /// @notice True if deposits/withdrawals/compounds are paused.
     bool public paused;
     /// @notice True if transfers are paused.
     bool public inPausedTransferMode = true;
+    /// @notice A permissioned address to change proxy implementation.
+    address public admin;
+    /// @notice Admin transfer happens in two steps.
+    address public pendingNewAdmin;
     /// @notice A permissioned address to change parameters, and start new cycle/set rewards.
     address public gov;
     /// @notice Governance transfer happens in two steps.
@@ -172,7 +181,7 @@ contract LentMyc is ERC20Upgradeable {
         uint256 _firstCycleStart,
         uint256 _preCycleTimelock,
         uint256 _depositCap,
-        address _proxy
+        address _admin
     ) external initializer {
         __ERC20_init("lentMYC", "lMYC");
         asset = ERC20(_myc);
@@ -181,14 +190,15 @@ contract LentMyc is ERC20Upgradeable {
         cycleStartTime = _firstCycleStart;
         preCycleTimelock = _preCycleTimelock;
         depositCap = _depositCap;
-        proxy = _proxy;
         cycle = 1;
+        admin = _admin;
         _approve(address(this), address(this), type(uint256).max);
         emit NewGov(address(0), _gov);
         emit SetCycleLength(0, _cycleLength);
         emit StartCycle(_firstCycleStart);
         emit SetPreCycleTimelock(0, _preCycleTimelock);
         emit SetDepositCap(0, _depositCap);
+        emit NewAdmin(address(0), _admin);
     }
 
     // TODO cancel deposit/withdrawal request. Make sure can't do during 2 hour window
@@ -201,11 +211,13 @@ contract LentMyc is ERC20Upgradeable {
     function updateUser(address user) public onlyUnpaused {
         (uint256 shareTransfer, uint256 assetTransfer) = _updateUser(user);
         if (shareTransfer > 0) {
+            // Give user some shares from their deposits.
             delete latestPendingDeposit[user];
             delete userPendingDeposits[user];
-            ISelfTransfer(proxy).selfTransfer(user, shareTransfer);
+            _transfer(address(this), user, shareTransfer);
         }
         if (assetTransfer > 0) {
+            // Give user some assets from their redemptions.
             delete latestPendingRedeem[user];
             delete userPendingRedeems[user];
             asset.safeTransfer(user, assetTransfer);
@@ -222,7 +234,7 @@ contract LentMyc is ERC20Upgradeable {
      * @param user The user who is compounding.
      * @param data Arbitrary bytes to pass to the IMycBuyer implementation.
      */
-    function compound(address user, bytes memory data) external onlyUnpaused {
+    function compound(address user, bytes calldata data) external onlyUnpaused {
         if (user != msg.sender) {
             require(userAutoCompound[user], "User not auto-compounding");
         }
@@ -285,7 +297,11 @@ contract LentMyc is ERC20Upgradeable {
      * @notice Requests a given number of MYC are deposited at the end of the current cycle.
      * @param assets Number of MYC to deposit.
      */
-    function deposit(uint256 assets, address receiver) public onlyUnpaused {
+    function deposit(uint256 assets, address receiver)
+        public
+        virtual
+        onlyUnpaused
+    {
         _deposit(assets, msg.sender, receiver);
     }
 
@@ -326,7 +342,7 @@ contract LentMyc is ERC20Upgradeable {
         uint256 shares,
         address receiver,
         address owner
-    ) external onlyUnpaused {
+    ) external virtual onlyUnpaused {
         // We want to be compliant with ERC4626, but only want msg.sender to be able to control their own assets.
         require(receiver == msg.sender, "receiver != msg.sender");
         require(owner == msg.sender, "owner != msg.sender");
@@ -737,6 +753,36 @@ contract LentMyc is ERC20Upgradeable {
     }
 
     /**
+     * @notice Initiates a transfer of contract proxy admin.
+     * @param _admin The new pending admin address.
+     * @dev After `signalSetAdmin` is called, `claimAdmin` can be called by `_admin` to claim the `admin` role.
+     */
+    function signalSetAdmin(address _admin) external onlyGov {
+        pendingNewAdmin = _admin;
+        emit SignalSetAdmin(_admin);
+    }
+
+    /**
+     * @notice Claims `pendingNewAdmin` as the new `admin` address.
+     * @dev `signalSetAdmin` sets `pendingNewAdmin`. `claimAdmin` sets `admin` as `pendingNewAdmin`.
+     * @dev Requires `msg.sender == pendingNewAdmin`.
+     */
+    function claimAdmin() external {
+        require(msg.sender == pendingNewAdmin, "msg.sender != pendingNewAdmin");
+        emit NewAdmin(admin, msg.sender);
+        admin = pendingNewAdmin;
+        pendingNewAdmin = address(0);
+    }
+
+    /**
+     * @notice Cancels any pending gov transfer initiated by `signalSetGov`.
+     */
+    function cancelAdminTransfer() external onlyGov {
+        pendingNewAdmin = address(0);
+        emit CancelAdminTransfer();
+    }
+
+    /**
      * @notice Initiates a transfer of contract governance.
      * @param _gov The new pending gov address.
      * @dev After `signalSetGov` is called, `claimGov` can be called by `_gov` to claim the `gov` role.
@@ -772,5 +818,18 @@ contract LentMyc is ERC20Upgradeable {
 
     function maxDeposit(address) external pure returns (uint256) {
         return type(uint256).max;
+    }
+
+    /**
+     * @dev UUPS upgrade authorization.
+     */
+    function _authorizeUpgrade(
+        address /*newImplementation*/
+    ) internal view override {
+        console.log("authorize");
+        console.log(cycleLength);
+        console.log(msg.sender);
+        console.log(admin);
+        require(msg.sender == admin, "msg.sender != admin");
     }
 }
