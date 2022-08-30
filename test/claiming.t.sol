@@ -98,7 +98,9 @@ contract Claiming is Test {
         }
 
         vm.warp(block.timestamp + EIGHT_DAYS);
+        uint256 dustSum = mycLend.dust();
         mycLend.newCycle{value: rewardAmount}(0, 0);
+        dustSum += mycLend.dust();
 
         for (uint256 i = 0; i < participants; i++) {
             address user = address(uint160(i + 10));
@@ -107,7 +109,7 @@ contract Claiming is Test {
             assertApproxEqAbs(
                 mycLend.getClaimableAmount(user),
                 (rewardAmount * 2) / participants,
-                mycLend.dust() + 5
+                dustSum
             );
             vm.prank(user);
             mycLend.claim(false, "");
@@ -115,7 +117,7 @@ contract Claiming is Test {
             assertApproxEqAbs(
                 postBalance - preBalance,
                 (rewardAmount * 2) / participants,
-                mycLend.dust() + 1
+                dustSum
             );
         }
     }
