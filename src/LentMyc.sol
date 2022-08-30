@@ -390,7 +390,7 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
             // Either way, we want to add all msg.value to dust.
             // Note: that this is an extreme edge case.
             cycleCumulativeEthRewards[cycle] = 0;
-            dust = address(this).balance;
+            dust += msg.value;
         } else {
             // Round down on div because we collect dust anyway.
             uint256 ethPerShare = (msg.value + dust).divWadDown(
