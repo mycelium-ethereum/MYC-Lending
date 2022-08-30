@@ -197,7 +197,7 @@ contract LentMyc is ERC20 {
 
         // Get ETH rewards since last update
         uint256 newUserEthRewards = _updatedEthRewards(user);
-        userLastUpdated[user] = cycle - 1;
+        userLastUpdated[user] = cycle;
         userCumulativeEthRewards[user] += newUserEthRewards;
     }
 
@@ -372,11 +372,15 @@ contract LentMyc is ERC20 {
             // Roll over dust
             if (
                 address(this).balance >
-                currentCycleCumulativeEthRewards.mulWadUp(totalSupply)
+                currentCycleCumulativeEthRewards.mulWadUp(
+                    totalSupply + _pendingRedeems
+                )
             ) {
                 dust =
                     address(this).balance -
-                    currentCycleCumulativeEthRewards.mulWadUp(totalSupply);
+                    currentCycleCumulativeEthRewards.mulWadUp(
+                        totalSupply + _pendingRedeems
+                    );
             } else {
                 dust = 0;
             }
@@ -500,21 +504,25 @@ contract LentMyc is ERC20 {
     function _updatedEthRewards(address user) private view returns (uint256) {
         // Get ETH rewards since last update
         uint256 cycleLastUpdated = userLastUpdated[user];
-        if (cycleLastUpdated == cycle) {
+        uint256 currentCycle = cycle;
+        if (cycleLastUpdated == 0 || cycleLastUpdated == currentCycle) {
             // First time, or already updated this cycle
             return 0;
         }
 
-        uint256 lastUpdatedEthRewards = cycleCumulativeEthRewards[
-            cycleLastUpdated
-        ];
-        uint256 currentCumulativeEthRewards = cycleCumulativeEthRewards[
-            cycle - 1
-        ];
-        uint256 newUserEthRewards = (currentCumulativeEthRewards -
-            lastUpdatedEthRewards).mulWadDown(
+        uint256 newUserEthRewards = 0;
+        // If the user has pending redeems, we want to count those towards rewards in which they occured, and nothing else.
+        newUserEthRewards += (cycleCumulativeEthRewards[cycleLastUpdated] -
+            cycleCumulativeEthRewards[cycleLastUpdated - 1]).mulWadDown(
                 trueBalanceOf(user) + userPendingRedeems[user]
             );
+
+        if (cycleLastUpdated < currentCycle - 1) {
+            newUserEthRewards += (cycleCumulativeEthRewards[currentCycle - 1] -
+                cycleCumulativeEthRewards[cycleLastUpdated]).mulWadDown(
+                    trueBalanceOf(user)
+                );
+        }
         return newUserEthRewards;
     }
 

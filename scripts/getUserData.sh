@@ -1,4 +1,4 @@
-address="0xE6F183a130D3a68Eb8Bf4314F3aA51f1d0013540"
+address="0xFAc9141E4F35a15DC3Dac648CB542B0664Cb5154"
 
 echo "lentMYC.totalSupply: "
 echo "1"

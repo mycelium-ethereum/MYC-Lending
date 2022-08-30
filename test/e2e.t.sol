@@ -372,5 +372,14 @@ contract E2E is Test {
         mycLend.newCycle{value: 1 * 10**18}(0, 0);
         assertEq(mycLend.getClaimableAmount(address(123)), 5 * 10**17);
         assertEq(mycLend.getClaimableAmount(address(this)), 5 * 10**17);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: 1 * 10**18}(0, 0);
+
+        assertEq(mycLend.getClaimableAmount(address(123)), 5 * 10**17);
+        assertEq(
+            mycLend.getClaimableAmount(address(this)),
+            5 * 10**17 + 1 * 10**18
+        );
     }
 }
