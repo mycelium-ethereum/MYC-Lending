@@ -120,17 +120,10 @@ contract Claiming is Test {
         }
     }
 
-    /*
     function testMultipleDepositsOverTimeScaleRewardsBasedOnTimeInVault(
         uint256 split,
         uint256 depositAmount
     ) public {
-        */
-    function testMultipleDepositsOverTimeScaleRewardsBasedOnTimeInVault()
-        public
-    {
-        uint256 split = 2;
-        uint256 depositAmount = 3910301709359636515;
         vm.assume(split > 1);
         vm.assume(depositAmount < myc.balanceOf(address(this)) / split);
         vm.assume(depositAmount < depositCap / 2);
