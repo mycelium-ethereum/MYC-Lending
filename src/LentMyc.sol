@@ -7,6 +7,8 @@ import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {IMycBuyer} from "interfaces/IMycBuyer.sol";
 
+import "forge-std/console.sol";
+
 /**
  * @title MYC Lending contract
  * @author CalabashSquash, with much inspiration from the solmate ERC4626 implementation.
@@ -183,6 +185,8 @@ contract LentMyc is ERC20 {
      * @dev Does not transfer ETH rewards. This has to be done by calling `claim`.
      */
     function updateUser(address user) public onlyUnpaused {
+        uint256 newUserEthRewards = _updatedEthRewards(user);
+        userCumulativeEthRewards[user] += newUserEthRewards;
         (uint256 shareTransfer, uint256 assetTransfer) = _updateUser(user);
         if (shareTransfer > 0) {
             delete latestPendingDeposit[user];
@@ -196,9 +200,7 @@ contract LentMyc is ERC20 {
         }
 
         // Get ETH rewards since last update
-        uint256 newUserEthRewards = _updatedEthRewards(user);
         userLastUpdated[user] = cycle;
-        userCumulativeEthRewards[user] += newUserEthRewards;
     }
 
     /**
@@ -361,6 +363,7 @@ contract LentMyc is ERC20 {
             cycleCumulativeEthRewards[cycle] = 0;
             dust = address(this).balance;
         } else {
+            // Round down on div because we collect dust anyway.
             uint256 ethPerShare = (msg.value + dust).divWadDown(
                 totalSupply + _pendingRedeems
             );
@@ -369,7 +372,11 @@ contract LentMyc is ERC20 {
                 ] + ethPerShare;
             cycleCumulativeEthRewards[cycle] = currentCycleCumulativeEthRewards;
 
-            // Roll over dust
+            /**
+             * Roll over dust.
+             * Calculating ETH Per share then multiplying by a user's shares is disobeying the "multiply before divide" rule,
+             * and thus we lose precision. This is OK as long as we account for it and it isn't allowed to get too big.
+             */
             if (
                 address(this).balance >
                 currentCycleCumulativeEthRewards.mulWadUp(
@@ -512,9 +519,11 @@ contract LentMyc is ERC20 {
 
         uint256 newUserEthRewards = 0;
         // If the user has pending redeems, we want to count those towards rewards in which they occured, and nothing else.
+        // If the user has pending deposits, we do not want to count those towards rewards in which the deposits occured.
+        // The user should update at least once before these start counting.
         newUserEthRewards += (cycleCumulativeEthRewards[cycleLastUpdated] -
             cycleCumulativeEthRewards[cycleLastUpdated - 1]).mulWadDown(
-                trueBalanceOf(user) + userPendingRedeems[user]
+                balanceOf[user] + userPendingRedeems[user]
             );
 
         if (cycleLastUpdated < currentCycle - 1) {
