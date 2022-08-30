@@ -5,5 +5,5 @@ withdrawAmount="0"
 while :
 do
     cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY --value $ethRewards $LMYC "newCycle(uint256,uint256)" $lossAmount $withdrawAmount
-    sleep 5m
+    sleep 250s
 done

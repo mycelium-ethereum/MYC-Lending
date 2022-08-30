@@ -209,6 +209,8 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
      * @dev Does not transfer ETH rewards. This has to be done by calling `claim`.
      */
     function updateUser(address user) public onlyUnpaused {
+        uint256 newUserEthRewards = _updatedEthRewards(user);
+        userCumulativeEthRewards[user] += newUserEthRewards;
         (uint256 shareTransfer, uint256 assetTransfer) = _updateUser(user);
         if (shareTransfer > 0) {
             // Give user some shares from their deposits.
@@ -224,9 +226,7 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
         }
 
         // Get ETH rewards since last update
-        uint256 newUserEthRewards = _updatedEthRewards(user);
-        userLastUpdated[user] = cycle - 1;
-        userCumulativeEthRewards[user] += newUserEthRewards;
+        userLastUpdated[user] = cycle;
     }
 
     /**
@@ -264,7 +264,7 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
     }
 
     function _claimAsMyc(address user, bytes memory data)
-        private
+        internal
         returns (uint256, uint256)
     {
         uint256 claimAmount = _claim(user);
@@ -285,7 +285,7 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
     /**
      * @dev Claims ETH rewards, taken as the difference between user's cumulative ETH rewards, and their claimed ETH rewards.
      */
-    function _claim(address claimant) private returns (uint256) {
+    function _claim(address claimant) internal returns (uint256) {
         uint256 claimed = userEthRewardsClaimed[claimant]; // Save SLOAD
         uint256 cumulative = userCumulativeEthRewards[claimant]; // Save SLOAD
         uint256 ethRewards = cumulative - claimed;
@@ -386,13 +386,15 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
         ///
         // Calculate ETH rewards per share.
         ///
-        if (totalSupply() == 0) {
+        if (totalSupply() + _pendingRedeems == 0) {
             // Nobody has minted yet, that means this is most likely the first cycle.
+            // Or, everyone has exited.
             // Either way, we want to add all msg.value to dust.
             // Note: that this is an extreme edge case.
             cycleCumulativeEthRewards[cycle] = 0;
             dust = address(this).balance;
         } else {
+            // Round down on div because we collect dust anyway.
             uint256 ethPerShare = (msg.value + dust).divWadDown(
                 totalSupply() + _pendingRedeems
             );
@@ -401,16 +403,29 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
                 ] + ethPerShare;
             cycleCumulativeEthRewards[cycle] = currentCycleCumulativeEthRewards;
 
-            // Roll over dust
+            /**
+             * Roll over dust.
+             * Calculating ETH Per share then multiplying by a user's shares is disobeying the "multiply before divide" rule,
+             * and thus we lose precision. This is OK as long as we account for it and it isn't allowed to get too big.
+             */
+
             if (
-                address(this).balance >
-                currentCycleCumulativeEthRewards.mulWadUp(totalSupply())
+                msg.value >
+                ethPerShare.mulWadDown(totalSupply() + _pendingRedeems)
             ) {
-                dust =
-                    address(this).balance -
-                    currentCycleCumulativeEthRewards.mulWadUp(totalSupply());
+                dust +=
+                    msg.value -
+                    ethPerShare.mulWadDown(totalSupply() + _pendingRedeems);
             } else {
-                dust = 0;
+                uint256 diff = ethPerShare.mulWadDown(
+                    totalSupply() + _pendingRedeems
+                ) - msg.value;
+                if (dust > diff && diff > 0) {
+                    dust -= diff;
+                } else {
+                    // msg.value == ethPerShare * totalSupply. Therefore, we can clear dust.
+                    dust = 0;
+                }
             }
         }
 
@@ -511,19 +526,6 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
         return _transfer(to, amount);
     }
 
-    /**
-     * @notice Transfer lentMYC *from* the lentMYC contract's ownership.
-     * @param to Recipient.
-     * @param amount Amount to transfer.
-     */
-    function selfTransfer(address to, uint256 amount)
-        external
-        onlySelf
-        returns (bool)
-    {
-        return _transfer(to, amount);
-    }
-
     function _transfer(address to, uint256 amount) private returns (bool) {
         bool ret = super.transfer(to, amount);
         return ret;
@@ -546,24 +548,30 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
      * @param user The address to get updated ETH rewards
      * @dev Does not update state/transfer ETH rewards.
      */
-    function _updatedEthRewards(address user) private view returns (uint256) {
+    function _updatedEthRewards(address user) internal view returns (uint256) {
         // Get ETH rewards since last update
         uint256 cycleLastUpdated = userLastUpdated[user];
-        if (cycleLastUpdated == cycle) {
+        uint256 currentCycle = cycle;
+        if (cycleLastUpdated == 0 || cycleLastUpdated == currentCycle) {
             // First time, or already updated this cycle
             return 0;
         }
 
-        uint256 lastUpdatedEthRewards = cycleCumulativeEthRewards[
-            cycleLastUpdated
-        ];
-        uint256 currentCumulativeEthRewards = cycleCumulativeEthRewards[
-            cycle - 1
-        ];
-        uint256 newUserEthRewards = (currentCumulativeEthRewards -
-            lastUpdatedEthRewards).mulWadDown(
-                trueBalanceOf(user) + userPendingRedeems[user]
+        uint256 newUserEthRewards = 0;
+        // If the user has pending redeems, we want to count those towards rewards in which they occured, and nothing else.
+        // If the user has pending deposits, we do not want to count those towards rewards in which the deposits occured.
+        // The user should update at least once before these start counting.
+        newUserEthRewards += (cycleCumulativeEthRewards[cycleLastUpdated] -
+            cycleCumulativeEthRewards[cycleLastUpdated - 1]).mulWadDown(
+                balanceOf(user) + userPendingRedeems[user]
             );
+
+        if (cycleLastUpdated < currentCycle - 1) {
+            newUserEthRewards += (cycleCumulativeEthRewards[currentCycle - 1] -
+                cycleCumulativeEthRewards[cycleLastUpdated]).mulWadDown(
+                    trueBalanceOf(user)
+                );
+        }
         return newUserEthRewards;
     }
 
@@ -585,7 +593,11 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
      * @return shareTransferOut Amount of shares (lentMYC) that can be given to `user`. This is the result of a past deposit.
      * @return assetTransferOut Amount of assets (MYC) that can be given to `user`. This is the result of a past redeem.
      */
-    function _updateUser(address user) private view returns (uint256, uint256) {
+    function _updateUser(address user)
+        internal
+        view
+        returns (uint256, uint256)
+    {
         // DEPOSIT
         uint256 latestDepositCycle = latestPendingDeposit[user]; // save an SLOAD when user doesn't deposit multiple times within one cycle. Not actually sure what ends up happening more often.
         uint256 shareTransferOut;
@@ -661,7 +673,7 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
      * @dev Used in `newCycle`, because `totalSupply` is decremented as people redeem, so we need to add this back to totalSupply.
      */
     function previewDepositNewCycle(uint256 assets, uint256 pendingShares)
-        private
+        internal
         view
         returns (uint256)
     {
@@ -683,7 +695,7 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
      * @dev Used in `newCycle`, because `totalSupply` is decremented as people redeem, so we need to add this back to totalSupply.
      */
     function previewRedeemNewCycle(uint256 shares)
-        private
+        internal
         view
         returns (uint256)
     {

@@ -160,8 +160,6 @@ contract E2E is Test {
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
-        mycLend.updateUser(users.user2);
-
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
@@ -384,5 +382,197 @@ contract E2E is Test {
         mycLend.newCycle{value: 1 * 10**18}(0, 0);
         assertEq(mycLend.getClaimableAmount(address(123)), 5 * 10**17);
         assertEq(mycLend.getClaimableAmount(address(this)), 5 * 10**17);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: 1 * 10**18}(0, 0);
+
+        assertEq(mycLend.getClaimableAmount(address(123)), 5 * 10**17);
+        assertEq(
+            mycLend.getClaimableAmount(address(this)),
+            5 * 10**17 + 1 * 10**18
+        );
+    }
+
+    function testGetClaimableAmountLargeRewardBug(uint256 rewardAmount2)
+        public
+    {
+        address user = address(123);
+        uint256 rewardAmount = 10000000000000;
+        rewardAmount2 = 13;
+        vm.assume(rewardAmount2 < depositCap / 100000);
+        vm.assume(rewardAmount2 < address(this).balance / 3);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        myc.approve(address(mycLend), type(uint256).max);
+        mycLend.deposit(1000, address(this));
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle(0, 0);
+
+        myc.transfer(user, 100000 * 10**18);
+        vm.prank(user);
+        myc.approve(address(mycLend), type(uint256).max);
+        vm.prank(user);
+        // Here, cycle = 4
+        mycLend.deposit(100 * 10**18, user);
+
+        assertEq(mycLend.userLastUpdated(user), 4);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount2}(0, 0);
+
+        assertEq(
+            mycLend.getClaimableAmount(address(this)),
+            rewardAmount * 2 + rewardAmount2
+        );
+        assertEq(mycLend.getClaimableAmount(user), 0);
+
+        uint256 preBalance = address(this).balance;
+
+        mycLend.claim(false, "");
+        uint256 postBalance = address(this).balance;
+
+        assertEq(postBalance - preBalance, rewardAmount * 2 + rewardAmount2);
+
+        mycLend.updateUser(user);
+        assertEq(mycLend.getClaimableAmount(user), 0);
+
+        preBalance = user.balance;
+        vm.prank(user);
+        mycLend.claim(false, "");
+        postBalance = user.balance;
+        assertEq(postBalance - preBalance, 0);
+
+        assertEq(mycLend.getClaimableAmount(address(this)), 0);
+        assertEq(mycLend.getClaimableAmount(user), 0);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount2}(0, 0);
+
+        // (rewardAmount2 / totalSupply) * balance
+        uint256 expectedClaimable = (rewardAmount2)
+            .divWadDown(mycLend.totalSupply())
+            .mulWadDown(mycLend.trueBalanceOf(address(this)));
+
+        assertApproxEqAbs(
+            mycLend.getClaimableAmount(address(this)),
+            expectedClaimable,
+            mycLend.dust() + 1
+        );
+
+        expectedClaimable = (rewardAmount2)
+            .divWadDown(mycLend.totalSupply())
+            .mulWadDown(mycLend.trueBalanceOf(user));
+
+        assertApproxEqAbs(
+            mycLend.getClaimableAmount(user),
+            expectedClaimable,
+            mycLend.dust() + 1
+        );
+
+        uint256 trueBal = mycLend.trueBalanceOf(user);
+        expectedClaimable = (rewardAmount2)
+            .divWadDown(mycLend.totalSupply() + mycLend.pendingRedeems())
+            .mulWadDown(trueBal);
+        vm.prank(user);
+        mycLend.redeem(trueBal - 1, user, user);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle(0, 0);
+
+        assertApproxEqAbs(
+            mycLend.getClaimableAmount(user),
+            expectedClaimable,
+            mycLend.dust() + 1
+        );
+
+        uint256 oldClaimable = mycLend.getClaimableAmount(user);
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        uint256 newClaimable = mycLend.getClaimableAmount(user);
+        expectedClaimable =
+            expectedClaimable +
+            (rewardAmount)
+                .divWadDown(mycLend.totalSupply() + mycLend.pendingRedeems())
+                .mulWadDown(mycLend.trueBalanceOf(user));
+        assertApproxEqAbs(
+            mycLend.getClaimableAmount(user),
+            expectedClaimable,
+            mycLend.dust() + 1
+        );
+
+        assertApproxEqAbs(
+            newClaimable - oldClaimable,
+            rewardAmount.divWadDown(mycLend.totalSupply()).mulWadDown(1),
+            0
+        );
+    }
+
+    function testGetClaimableAmountSoleParticipant(uint256 rewardAmount)
+        public
+    {
+        vm.assume(rewardAmount < depositCap / 100000);
+        vm.assume(rewardAmount < address(this).balance / 3);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        myc.approve(address(mycLend), type(uint256).max);
+
+        mycLend.deposit(1 * 10**18, address(this));
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        mycLend.redeem(1 * 10**18, address(this), address(this));
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        assertApproxEqAbs(
+            mycLend.getClaimableAmount(address(this)),
+            rewardAmount * 4,
+            mycLend.dust()
+        );
+    }
+
+    function testTemp() public {
+        uint256 rewardAmount = 10000000000000;
+        myc.transfer(
+            address(mycBuyer),
+            rewardAmount * 100 * mycBuyer.exchangeRate()
+        );
+        vm.assume(rewardAmount < depositCap / 100000);
+        vm.assume(rewardAmount < address(this).balance / 3);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        myc.approve(address(mycLend), type(uint256).max);
+
+        mycLend.deposit(1 * 10**18, address(this));
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        mycLend.redeem(1 * 10**17, address(this), address(this));
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        mycLend.compound(address(this), "");
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        mycLend.compound(address(this), "");
     }
 }

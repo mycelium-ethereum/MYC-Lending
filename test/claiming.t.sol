@@ -91,7 +91,7 @@ contract Claiming is Test {
             assertApproxEqAbs(
                 mycLend.getClaimableAmount(user),
                 (rewardAmount * 2) / participants,
-                mycLend.dust() + 1
+                mycLend.dust() + 5
             );
             vm.prank(user);
             mycLend.claim(false, "");
@@ -108,11 +108,11 @@ contract Claiming is Test {
         uint256 split,
         uint256 depositAmount
     ) public {
-        vm.assume(depositAmount < myc.balanceOf(address(this)) / 2);
+        vm.assume(split > 1);
+        vm.assume(depositAmount < myc.balanceOf(address(this)) / split);
         vm.assume(depositAmount < depositCap / 2);
         vm.assume(depositAmount > 0);
         vm.assume(split < depositAmount / 2);
-        vm.assume(split > 1);
         uint256 rewardAmount = 1 * 10**18;
         address user = address(123);
         myc.approve(address(mycLend), depositAmount);
@@ -122,15 +122,21 @@ contract Claiming is Test {
         mycLend.newCycle(0, 0);
 
         vm.warp(block.timestamp + EIGHT_DAYS);
+
         mycLend.newCycle{value: rewardAmount}(0, 0);
+        uint256 dust = mycLend.dust();
 
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
+        uint256 expectedClaimable = rewardAmount
+            .divWadDown(mycLend.totalSupply())
+            .mulWadDown(depositAmount);
+
         assertApproxEqAbs(
             mycLend.getClaimableAmount(address(this)),
-            rewardAmount,
-            mycLend.dust() + 1
+            expectedClaimable,
+            dust + 1
         );
 
         myc.transfer(user, depositAmount);
@@ -148,6 +154,18 @@ contract Claiming is Test {
 
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        expectedClaimable =
+            expectedClaimable +
+            rewardAmount.divWadDown(mycLend.totalSupply()).mulWadDown(
+                mycLend.trueBalanceOf(address(this))
+            );
+
+        assertApproxEqAbs(
+            mycLend.getClaimableAmount(address(this)),
+            expectedClaimable,
+            mycLend.dust() + 15
+        );
 
         assertApproxEqAbs(
             mycLend.getClaimableAmount(user),
@@ -182,7 +200,7 @@ contract Claiming is Test {
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
         // Shouldn't get any rewards.
-        assertEq(mycLend.getClaimableAmount(user), 0);
+        assertApproxEqAbs(mycLend.getClaimableAmount(user), 0, mycLend.dust());
 
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
@@ -198,19 +216,15 @@ contract Claiming is Test {
         );
     }
 
-    /*
     function testCanClaimETHNthRewardAmountIfNStaked(
         uint256 depositAmount,
         uint256 rewardAmount,
         uint256 participants
     ) public {
-        */
-    function testCanClaimETHNthRewardAmountIfNStaked() public {
-        uint256 depositAmount = 10;
-        uint256 rewardAmount = 11;
-        uint256 participants = 2;
-        vm.assume(rewardAmount < depositCap);
+        vm.assume(rewardAmount < depositCap / 10000);
         vm.assume(depositAmount < myc.balanceOf(address(this)) / 3);
+        vm.assume(participants > 0);
+        vm.assume(depositAmount < depositCap / participants);
         vm.assume(depositAmount > 0);
         vm.assume(participants < depositAmount);
         // Limit to 2000 otherwise it sometimes takes too long
