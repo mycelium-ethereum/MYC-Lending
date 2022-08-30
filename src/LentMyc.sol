@@ -10,8 +10,6 @@ import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {IMycBuyer} from "interfaces/IMycBuyer.sol";
 import {Initializable} from "openzeppelin-contracts/contracts/proxy/utils/Initializable.sol";
 
-import "forge-std/console.sol";
-
 interface ISelfTransfer {
     function selfTransfer(address to, uint256 amount) external returns (bool);
 }
@@ -838,10 +836,6 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
     function _authorizeUpgrade(
         address /*newImplementation*/
     ) internal view override {
-        console.log("authorize");
-        console.log(cycleLength);
-        console.log(msg.sender);
-        console.log(admin);
         require(msg.sender == admin, "msg.sender != admin");
     }
 }

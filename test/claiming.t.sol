@@ -6,10 +6,12 @@ import {LentMyc} from "src/LentMyc.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Myc} from "src/Myc.sol";
 import {DummyMycBuyer} from "src/DummyMycBuyer.sol";
+import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract Claiming is Test {
     using FixedPointMathLib for uint256;
     LentMyc mycLend;
+    LentMyc impl;
     Myc myc;
     DummyMycBuyer mycBuyer;
     uint256 constant EIGHT_DAYS = 60 * 60 * 24 * 8;
@@ -27,7 +29,21 @@ contract Claiming is Test {
         myc = new Myc("Mycelium", "MYC", 18);
 
         // Deploy a new lending contract with the cycle starting 4 days ago
-        mycLend = new LentMyc();
+        impl = new LentMyc();
+        impl.initialize(
+            address(myc),
+            address(this),
+            // 18,
+            EIGHT_DAYS,
+            block.timestamp - FOUR_DAYS,
+            TWO_HOURS,
+            depositCap,
+            admin
+        );
+
+        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), "");
+        // cast proxy to LentMyc
+        mycLend = LentMyc(address(proxy));
         mycLend.initialize(
             address(myc),
             address(this),
@@ -104,10 +120,17 @@ contract Claiming is Test {
         }
     }
 
+    /*
     function testMultipleDepositsOverTimeScaleRewardsBasedOnTimeInVault(
         uint256 split,
         uint256 depositAmount
     ) public {
+        */
+    function testMultipleDepositsOverTimeScaleRewardsBasedOnTimeInVault()
+        public
+    {
+        uint256 split = 2;
+        uint256 depositAmount = 3910301709359636515;
         vm.assume(split > 1);
         vm.assume(depositAmount < myc.balanceOf(address(this)) / split);
         vm.assume(depositAmount < depositCap / 2);
@@ -133,6 +156,7 @@ contract Claiming is Test {
             .divWadDown(mycLend.totalSupply())
             .mulWadDown(depositAmount);
 
+        console.log(1);
         assertApproxEqAbs(
             mycLend.getClaimableAmount(address(this)),
             expectedClaimable,
@@ -161,11 +185,13 @@ contract Claiming is Test {
                 mycLend.trueBalanceOf(address(this))
             );
 
+        console.log(1);
         assertApproxEqAbs(
             mycLend.getClaimableAmount(address(this)),
             expectedClaimable,
             mycLend.dust() + 15
         );
+        console.log(1);
 
         assertApproxEqAbs(
             mycLend.getClaimableAmount(user),
@@ -176,6 +202,7 @@ contract Claiming is Test {
             ),
             mycLend.dust() + 1
         );
+        console.log(1);
 
         assertApproxEqAbs(
             mycLend.getClaimableAmount(user),
@@ -200,11 +227,13 @@ contract Claiming is Test {
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
         // Shouldn't get any rewards.
+        console.log(1);
         assertApproxEqAbs(mycLend.getClaimableAmount(user), 0, mycLend.dust());
 
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
+        console.log(1);
         assertApproxEqAbs(
             mycLend.getClaimableAmount(user),
             (

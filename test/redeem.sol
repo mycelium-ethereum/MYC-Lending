@@ -4,10 +4,12 @@ pragma solidity ^0.8.13;
 import "forge-std/Test.sol";
 import {LentMyc} from "src/LentMyc.sol";
 import {Myc} from "src/Myc.sol";
+import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract Redeem is Test {
     LentMyc mycLend;
     Myc myc;
+    LentMyc impl;
     uint256 EIGHT_DAYS = 60 * 60 * 24 * 8;
     uint256 FOUR_DAYS = EIGHT_DAYS / 2;
     uint256 TWO_HOURS = 60 * 60 * 2;
@@ -20,7 +22,21 @@ contract Redeem is Test {
         myc = new Myc("Mycelium", "MYC", 18);
 
         // Deploy a new lending contract with the cycle starting 4 days ago
-        mycLend = new LentMyc();
+        impl = new LentMyc();
+        impl.initialize(
+            address(myc),
+            address(this),
+            // 18,
+            EIGHT_DAYS,
+            block.timestamp - FOUR_DAYS,
+            TWO_HOURS,
+            depositCap,
+            admin
+        );
+
+        ERC1967Proxy proxy = new ERC1967Proxy(address(impl), "");
+        // cast proxy to LentMyc
+        mycLend = LentMyc(address(proxy));
         mycLend.initialize(
             address(myc),
             address(this),
