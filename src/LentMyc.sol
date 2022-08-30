@@ -238,7 +238,7 @@ contract LentMyc is ERC20 {
     }
 
     function _claimAsMyc(address user, bytes memory data)
-        private
+        internal
         returns (uint256, uint256)
     {
         uint256 claimAmount = _claim(user);
@@ -259,7 +259,7 @@ contract LentMyc is ERC20 {
     /**
      * @dev Claims ETH rewards, taken as the difference between user's cumulative ETH rewards, and their claimed ETH rewards.
      */
-    function _claim(address claimant) private returns (uint256) {
+    function _claim(address claimant) internal returns (uint256) {
         uint256 claimed = userEthRewardsClaimed[claimant]; // Save SLOAD
         uint256 cumulative = userCumulativeEthRewards[claimant]; // Save SLOAD
         uint256 ethRewards = cumulative - claimed;
@@ -508,7 +508,7 @@ contract LentMyc is ERC20 {
      * @param user The address to get updated ETH rewards
      * @dev Does not update state/transfer ETH rewards.
      */
-    function _updatedEthRewards(address user) private view returns (uint256) {
+    function _updatedEthRewards(address user) internal view returns (uint256) {
         // Get ETH rewards since last update
         uint256 cycleLastUpdated = userLastUpdated[user];
         uint256 currentCycle = cycle;
@@ -553,7 +553,11 @@ contract LentMyc is ERC20 {
      * @return shareTransferOut Amount of shares (lentMYC) that can be given to `user`. This is the result of a past deposit.
      * @return assetTransferOut Amount of assets (MYC) that can be given to `user`. This is the result of a past redeem.
      */
-    function _updateUser(address user) private view returns (uint256, uint256) {
+    function _updateUser(address user)
+        internal
+        view
+        returns (uint256, uint256)
+    {
         // DEPOSIT
         uint256 latestDepositCycle = latestPendingDeposit[user]; // save an SLOAD when user doesn't deposit multiple times within one cycle. Not actually sure what ends up happening more often.
         uint256 shareTransferOut;
@@ -629,7 +633,7 @@ contract LentMyc is ERC20 {
      * @dev Used in `newCycle`, because `totalSupply` is decremented as people redeem, so we need to add this back to totalSupply.
      */
     function previewDepositNewCycle(uint256 assets, uint256 pendingShares)
-        private
+        internal
         view
         returns (uint256)
     {
@@ -651,7 +655,7 @@ contract LentMyc is ERC20 {
      * @dev Used in `newCycle`, because `totalSupply` is decremented as people redeem, so we need to add this back to totalSupply.
      */
     function previewRedeemNewCycle(uint256 shares)
-        private
+        internal
         view
         returns (uint256)
     {
@@ -664,7 +668,7 @@ contract LentMyc is ERC20 {
      * @param to Recipient.
      * @param amount Amount to transfer.
      */
-    function selfTransfer(address to, uint256 amount) private returns (bool) {
+    function selfTransfer(address to, uint256 amount) internal returns (bool) {
         balanceOf[address(this)] -= amount;
 
         // Cannot overflow because the sum of all user

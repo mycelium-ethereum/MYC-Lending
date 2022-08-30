@@ -163,8 +163,6 @@ contract E2E is Test {
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
-        mycLend.updateUser(users.user2);
-
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
