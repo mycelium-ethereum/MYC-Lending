@@ -706,6 +706,6 @@ contract E2E is Test {
 
         vm.warp(block.timestamp + EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
-        uint256 claimable = mycLend.getClaimableAmount(user);
+        claimable = mycLend.getClaimableAmount(user);
     }
 }
