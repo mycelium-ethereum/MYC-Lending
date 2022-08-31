@@ -667,6 +667,12 @@ contract E2E is Test {
             mycLend.cycle() - 1
         );
 
+        uint256 claimable = mycLend.getClaimableAmount(user);
+
         assertEq(cumulativeBefore, cumulativeAfter);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        claimable = mycLend.getClaimableAmount(user);
     }
 }
