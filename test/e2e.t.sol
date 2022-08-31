@@ -590,4 +590,122 @@ contract E2E is Test {
 
         mycLend.compound(address(this), "");
     }
+
+    function testGetClaimableReverting() public {
+        uint256 rewardAmount = 10000000000000;
+        address user = address(123);
+        mycLend.setMycBuyer(address(mycBuyer));
+        myc.transfer(
+            address(mycBuyer),
+            100 * 10**18 * 10000 * mycBuyer.exchangeRate()
+        );
+
+        vm.assume(rewardAmount < depositCap / 100000);
+        vm.assume(rewardAmount < address(this).balance / 3);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        myc.approve(address(mycLend), type(uint256).max);
+        mycLend.deposit(1 * 10**18, address(this));
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        mycLend.compound(address(this), "");
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        mycLend.compound(address(this), "");
+        mycLend.claim(false, "");
+        mycLend.redeem(1 * 10**17, address(this), address(this));
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        mycLend.claim(false, "");
+
+        myc.transfer(user, 1000000 * 10**18);
+        vm.prank(user);
+        myc.approve(address(mycLend), type(uint256).max);
+        vm.prank(user);
+        mycLend.deposit(200 * 10**18, user);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        mycLend.claim(false, "");
+        mycLend.claim(false, "");
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        mycLend.claim(true, "");
+        mycLend.claim(false, "");
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        mycLend.compound(address(this), "");
+
+        for (uint256 i = 0; i < 7; i++) {
+            vm.warp(block.timestamp + EIGHT_DAYS);
+            mycLend.newCycle{value: rewardAmount}(0, 0);
+        }
+        mycLend.redeem(1301291604570290000, address(this), address(this));
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        vm.prank(user);
+        mycLend.deposit(200 * 10**18, user);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: 1 * 10**18}(0, 0);
+
+        // vm.prank(user);
+        mycLend.claim(false, "");
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        vm.prank(user);
+        mycLend.compound(user, "");
+
+        for (uint256 i = 0; i < 11; i++) {
+            vm.warp(block.timestamp + EIGHT_DAYS);
+            mycLend.newCycle{value: rewardAmount}(0, 0);
+        }
+
+        vm.prank(user);
+        mycLend.redeem(10401192891712476000000, user, user);
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        vm.prank(user);
+        mycLend.deposit(100000000000000000000, user);
+        vm.prank(user);
+        mycLend.deposit(1000000000000000000000, user);
+
+        uint256 cumulativeBefore = mycLend.cycleCumulativeEthRewards(
+            mycLend.cycle() - 1
+        );
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        uint256 cumulativeAfter = mycLend.cycleCumulativeEthRewards(
+            mycLend.cycle() - 1
+        );
+
+        uint256 claimable = mycLend.getClaimableAmount(user);
+
+        assertEq(cumulativeBefore, cumulativeAfter);
+
+        vm.warp(block.timestamp + EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+        uint256 claimable = mycLend.getClaimableAmount(user);
+    }
 }
