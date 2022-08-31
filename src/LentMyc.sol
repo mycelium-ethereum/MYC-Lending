@@ -357,9 +357,11 @@ contract LentMyc is ERC20 {
         if (totalSupply + _pendingRedeems == 0) {
             // Nobody has minted yet, that means this is most likely the first cycle.
             // Or, everyone has exited.
-            // Either way, we want to add all msg.value to dust.
+            // Either way, we want to add all msg.value to dust, and not to increment the cumulative ETH rewards.
             // Note: that this is an extreme edge case.
-            cycleCumulativeEthRewards[cycle] = 0;
+            cycleCumulativeEthRewards[cycle] = cycleCumulativeEthRewards[
+                cycle - 1
+            ];
             dust += msg.value;
         } else {
             // Round down on div because we collect dust anyway.
