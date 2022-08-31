@@ -5,6 +5,7 @@ firstCycleStart="1661235795"
 preCycleTimelock="60"
 # 100,000
 depositCap="100000000000000000000000"
+admin="0xc18fcFFD8c9173faB1684Ec1EEE32976f780B13E"
 
 forge build
 
@@ -14,7 +15,7 @@ myc=${arr[9]}
 echo "Deployed test MYC to address ${myc}"
 
 lentMycOutput=$(forge create --rpc-url $RPC_URL \
-    --constructor-args $myc $gov $decimals $cycleLength $firstCycleStart $preCycleTimelock $depositCap \
+    --constructor-args \ # $myc $gov $decimals $cycleLength $firstCycleStart $preCycleTimelock $depositCap \
     --private-key $PRIVATE_KEY src/LentMyc.sol:LentMyc)
 
 # echo "lentMycOutput: ${lentMycOutput}"
@@ -23,7 +24,29 @@ arr2=($lentMycOutput)
 lMyc=${arr2[9]}
 
 echo " "
-echo "lentMYC deployed to address ${lMyc}"
+echo "IMPLEMENTATION: lentMYC deployed to address ${lMyc}"
+
+forge build
+echo "Deploying proxy"
+proxy=$(forge create --rpc-url $RPC_URL \
+    --constructor-args $lMyc "" \
+    --private-key $PRIVATE_KEY src/ERC1967Proxy.sol:ERC1967Proxy)
+
+echo "Deployed proxy"
+echo $proxy
+proxyArr=($proxy)
+echo "Deployed proxy"
+proxy=${proxyArr[9]}
+
+echo " "
+echo "PROXY: lentMYC proxy deployed to address ${proxy}"
+
+echo "Initializing..."
+echo $myc $gov $decimals $cycleLength $firstCycleStart $preCycleTimelock $depositCap $admin
+a=$(cast send --rpc-url \
+    $RPC_URL --private-key $PRIVATE_KEY $proxy \
+    "initialize(address,address,uint256,uint256,uint256,uint256,address)" \
+    $myc $gov $cycleLength $firstCycleStart $preCycleTimelock $depositCap $admin)
 
 dummyMycBuyer=$(forge create --rpc-url $RPC_URL \
     --constructor-args $myc $gov \
@@ -36,7 +59,7 @@ dummyMycBuyer=${arr3[9]}
 
 echo " "
 echo "setting mycBuyer"
-a=`cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $lMyc "setMycBuyer(address)" $dummyMycBuyer`
+a=`cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $proxy "setMycBuyer(address)" $dummyMycBuyer`
 
 echo " "
 echo "dummyMycBuyer deployed to address ${dummyMycBuyer}"
