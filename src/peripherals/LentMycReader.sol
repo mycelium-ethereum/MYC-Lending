@@ -71,7 +71,6 @@ contract LentMycReader {
 
         (uint256 cycleSupply, uint256 cycleMyc) =  lentMyc.cycleSharesAndAssets(cycle);
 
-
         if (fetchingCurrentCycle) {
             uint256 lastCyclesEthRewards = cyclesEthRewardsPerShare.mulWadDown(cycleSupply);
             return _getCurrentCycleInfo(lentMyc_, lastCyclesEthRewards);
