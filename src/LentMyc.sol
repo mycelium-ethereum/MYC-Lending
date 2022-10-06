@@ -8,6 +8,7 @@ import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/Safe
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {IMycBuyer} from "./interfaces/IMycBuyer.sol";
+import {ReentrancyGuard} from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 interface ISelfTransfer {
     function selfTransfer(address to, uint256 amount) external returns (bool);
@@ -22,7 +23,7 @@ interface ISelfTransfer {
  *          - You get your lMYC tokens at the end of the cycle, rather than instantly.
  * @dev A cycle can start whenever `gov` calls `newCycle`, as long as `block.timestamp > cycleStartTime + cycleLength - preCycleTimelock`.
  */
-contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
+contract LentMyc is ERC20Upgradeable, UUPSUpgradeable, ReentrancyGuard {
     /// @custom:invariant `trueBalanceOf(user)` always equals what `balanceOf` equals immediately after a call to `updateUser(user)`.
     /// @custom:invariant After updateUser is called, there should be no deposits or withdrawals that were made in a cycle prior to the current one. i.e. they should be deleted.
     /// @custom:invariant After updateUser is called, the user should have their shares balance increased by `deposit_asset_amount * total_share_supply / total_assets`, or by `deposit_asset_amount` if `total_share_supply = 0`.
@@ -231,7 +232,7 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
      * @param user The user who is compounding.
      * @param data Arbitrary bytes to pass to the IMycBuyer implementation.
      */
-    function compound(address user, bytes calldata data) external onlyUnpaused {
+    function compound(address user, bytes calldata data) external onlyUnpaused nonReentrant {
         if (user != msg.sender) {
             require(userAutoCompound[user], "User not auto-compounding");
         }
@@ -247,7 +248,7 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
      * @param asMyc True if swapping to MYC. False if kept in ETH.
      * @param data Arbitrary bytes to pass to the IMycBuyer implementation.
      */
-    function claim(bool asMyc, bytes memory data) external onlyUnpaused {
+    function claim(bool asMyc, bytes memory data) external onlyUnpaused nonReentrant {
         updateUser(msg.sender);
         uint256 rewards;
         if (asMyc) {
@@ -339,7 +340,7 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable {
         uint256 shares,
         address receiver,
         address owner
-    ) external virtual onlyUnpaused {
+    ) external virtual onlyUnpaused nonReentrant {
         // We want to be compliant with ERC4626, but only want msg.sender to be able to control their own assets.
         require(receiver == msg.sender, "receiver != msg.sender");
         require(owner == msg.sender, "owner != msg.sender");
