@@ -7,7 +7,7 @@ import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
-import {IMycBuyer} from "interfaces/IMycBuyer.sol";
+import {IMycBuyer} from "./interfaces/IMycBuyer.sol";
 
 interface ISelfTransfer {
     function selfTransfer(address to, uint256 amount) external returns (bool);
