@@ -11,17 +11,26 @@ import {ILentMyc} from "../interfaces/ILentMyc.sol";
 contract LentMycReader {
     using FixedPointMathLib for uint256;
 
-    /// @notice External function to access internal _getCurrentCycleInfo
-    function getCurrentCycleInfo(address lentMyc_, uint256 ethRewards) external view returns (uint256[] memory) {
+    struct CycleInfo {
+        uint256 ethRewardsPerShare;
+        uint256 supply;
+        uint256 assets;
+    }
+
+    /**
+     * @notice External function to access internal _getCurrentCycleInfo
+     */
+    function getCurrentCycleInfo(address lentMyc_, uint256 ethRewards) external view returns (CycleInfo memory) {
         return _getCurrentCycleInfo(lentMyc_, ethRewards);
     }
 
-    /// @notice Get the current cycles reward reward and info given an eth reward amount
-    /// @dev Dospore
-    /// @param lentMyc_ address of lentMyc
-    /// @param ethRewards amount of eth that will be rewarded to current cycle stakers
-    /// @return Current cycles reward info based on the given eth rewards amount
-    function _getCurrentCycleInfo(address lentMyc_, uint256 ethRewards) internal view returns (uint256[] memory) {
+    /**
+     * @notice Get the current cycles reward reward and info given an eth reward amount
+     * @param lentMyc_ address of lentMyc
+     * @param ethRewards amount of eth that will be rewarded to current cycle stakers
+     * @return Current cycles reward info based on the given eth rewards amount
+     */
+    function _getCurrentCycleInfo(address lentMyc_, uint256 ethRewards) internal view returns (CycleInfo memory) {
         ILentMyc lentMyc = ILentMyc(lentMyc_);
 
         uint256 dust = lentMyc.dust();
@@ -32,26 +41,27 @@ contract LentMycReader {
 
         uint256 currentCyclesEthRewardsPerShare = (ethRewards + dust).divWadDown(currentCycleSupply);
 
-        uint256[] memory info;
-        info[0] = currentCyclesEthRewardsPerShare;
-        info[1] = currentCycleSupply;
-        info[2] = currentCycleMyc;
+        CycleInfo memory info = CycleInfo({
+            ethRewardsPerShare: currentCyclesEthRewardsPerShare,
+            supply: currentCycleSupply,
+            assets: currentCycleMyc
+        });
 
         return info;
     }
 
-
-    /// @notice Get an arbitrary cycles info
-    /// @dev Dospore
-    /// @param lentMyc_ address of lentMyc
-    /// @param cycle number to retrieve info on
-    /// @return Given cycles reward info or the currentCycles info based on the previous cycle
-    function getCycleInfo(address lentMyc_, uint256 cycle) external view returns (uint256[] memory) {
+    /**
+     * @notice Get an arbitrary cycle's info
+     * @param lentMyc_ address of lentMyc
+     * @param cycle number to retrieve info on
+     * @return Given cycles reward info or the currentCycles info based on the previous cycle
+     */
+    function getCycleInfo(address lentMyc_, uint256 cycle) external view returns (CycleInfo memory) {
         ILentMyc lentMyc = ILentMyc(lentMyc_);
-        uint256 cycle_ = lentMyc.cycle();
+        uint256 currentCycle = lentMyc.cycle();
         bool fetchingCurrentCycle = false;
-        if (cycle >= cycle_) {
-            cycle = cycle_ - 1;
+        if (cycle >= currentCycle) {
+            cycle = currentCycle - 1;
             fetchingCurrentCycle = true;
         }
 
@@ -67,10 +77,11 @@ contract LentMycReader {
             return _getCurrentCycleInfo(lentMyc_, lastCyclesEthRewards);
         }
 
-        uint256[] memory info;
-        info[0] = cyclesEthRewardsPerShare;
-        info[1] = cycleSupply;
-        info[2] = cycleMyc;
+        CycleInfo memory info = CycleInfo({
+            ethRewardsPerShare: cyclesEthRewardsPerShare,
+            supply: cycleSupply,
+            assets: cycleMyc
+        });
 
         return info;
     }
