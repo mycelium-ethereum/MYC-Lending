@@ -6,7 +6,7 @@ import {ILentMyc} from "../interfaces/ILentMyc.sol";
 
 /**
  * @title MYC Lending contract reader
- * @author Dospore
+ * @author Dospore.
  */
 contract LentMycReader {
     using FixedPointMathLib for uint256;
@@ -18,17 +18,17 @@ contract LentMycReader {
     }
 
     /**
-     * @notice External function to access internal _getCurrentCycleInfo
+     * @notice External function to access internal _getCurrentCycleInfo.
      */
     function getCurrentCycleInfo(address lentMyc_, uint256 ethRewards) external view returns (CycleInfo memory) {
         return _getCurrentCycleInfo(lentMyc_, ethRewards);
     }
 
     /**
-     * @notice Get the current cycles reward reward and info given an eth reward amount
-     * @param lentMyc_ address of lentMyc
-     * @param ethRewards amount of eth that will be rewarded to current cycle stakers
-     * @return Current cycles reward info based on the given eth rewards amount
+     * @notice Get the current cycles reward reward and info given an eth reward amount.
+     * @param lentMyc_ address of lentMyc.
+     * @param ethRewards amount of eth that will be rewarded to current cycle stakers.
+     * @return Current cycles reward info based on the given eth rewards amount.
      */
     function _getCurrentCycleInfo(address lentMyc_, uint256 ethRewards) internal view returns (CycleInfo memory) {
         ILentMyc lentMyc = ILentMyc(lentMyc_);
@@ -51,10 +51,10 @@ contract LentMycReader {
     }
 
     /**
-     * @notice Get an arbitrary cycle's info
-     * @param lentMyc_ address of lentMyc
-     * @param cycle number to retrieve info on
-     * @return Given cycles reward info or the currentCycles info based on the previous cycle
+     * @notice Get an arbitrary cycle's info.
+     * @param lentMyc_ address of lentMyc.
+     * @param cycle number to retrieve info on.
+     * @return Given cycles reward info or the currentCycles info based on the previous cycle.
      */
     function getCycleInfo(address lentMyc_, uint256 cycle) external view returns (CycleInfo memory) {
         ILentMyc lentMyc = ILentMyc(lentMyc_);
