@@ -11,11 +11,6 @@ import {ILentMyc} from "../interfaces/ILentMyc.sol";
 contract LentMycReader {
     using FixedPointMathLib for uint256;
 
-    struct CycleInfo {
-        uint256 totalSupply;
-        uint256 totalAssets;
-    }
-
     /// @notice External function to access internal _getCurrentCycleInfo
     function getCurrentCycleInfo(address lentMyc_, uint256 ethRewards) external view returns (uint256[] memory) {
         return _getCurrentCycleInfo(lentMyc_, ethRewards);
