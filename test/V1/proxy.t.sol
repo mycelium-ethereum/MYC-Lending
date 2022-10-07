@@ -2,11 +2,11 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import {LentMyc} from "src/LentMyc.sol";
+import {LentMyc} from "src/V1/LentMyc.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
-import {Myc} from "src/Myc.sol";
-import {DummyMycBuyer} from "src/DummyMycBuyer.sol";
-import {DummyUpgrade} from "src/DummyUpgrade.sol";
+import {Myc} from "src/token/Myc.sol";
+import {DummyMycBuyer} from "src/V1/DummyMycBuyer.sol";
+import {DummyUpgrade} from "src/V1/DummyUpgrade.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract Proxy is Test {

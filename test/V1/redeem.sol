@@ -2,8 +2,8 @@
 pragma solidity ^0.8.13;
 
 import "forge-std/Test.sol";
-import {LentMyc} from "src/LentMyc.sol";
-import {Myc} from "src/Myc.sol";
+import {LentMyc} from "src/V1/LentMyc.sol";
+import {Myc} from "src/token/Myc.sol";
 import {ERC1967Proxy} from "openzeppelin-contracts/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 
 contract Redeem is Test {
