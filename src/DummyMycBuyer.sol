@@ -2,7 +2,7 @@
 pragma solidity ^0.8.13;
 
 import {ERC20} from "solmate/tokens/ERC20.sol";
-import {IMycBuyer} from "interfaces/IMycBuyer.sol";
+import {IMycBuyer} from "./interfaces/IMycBuyer.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 
 contract DummyMycBuyer is IMycBuyer {
