@@ -7,7 +7,7 @@ import {ERC20} from "openzeppelin-contracts/contracts/token/ERC20/ERC20.sol";
 import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
 import {FixedPointMathLib} from "solmate/utils/FixedPointMathLib.sol";
 import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
-import {IMycBuyer} from "./interfaces/IMycBuyer.sol";
+import {IMycBuyer} from "../interfaces/IMycBuyer.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
 interface ISelfTransfer {
@@ -232,7 +232,11 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable, ReentrancyGuard {
      * @param user The user who is compounding.
      * @param data Arbitrary bytes to pass to the IMycBuyer implementation.
      */
-    function compound(address user, bytes calldata data) external onlyUnpaused nonReentrant {
+    function compound(address user, bytes calldata data)
+        external
+        onlyUnpaused
+        nonReentrant
+    {
         if (user != msg.sender) {
             require(userAutoCompound[user], "User not auto-compounding");
         }
@@ -248,7 +252,11 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable, ReentrancyGuard {
      * @param asMyc True if swapping to MYC. False if kept in ETH.
      * @param data Arbitrary bytes to pass to the IMycBuyer implementation.
      */
-    function claim(bool asMyc, bytes memory data) external onlyUnpaused nonReentrant {
+    function claim(bool asMyc, bytes memory data)
+        external
+        onlyUnpaused
+        nonReentrant
+    {
         updateUser(msg.sender);
         uint256 rewards;
         if (asMyc) {
