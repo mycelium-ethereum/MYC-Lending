@@ -377,7 +377,6 @@ contract RewardTracker is
         require(isHandler[msg.sender], "RewardTracker: forbidden");
     }
 
-    // TODO put a deposit cap
     function _stake(
         address _fundingAccount,
         address _account,
