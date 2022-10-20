@@ -95,6 +95,146 @@ contract Migration is Test {
         rewardTracker.setHandler(address(mycLend), true);
     }
 
+    function testUpgradeThenMultiMigrateWithRewards(
+        uint256 depositAmount,
+        uint256 lossAmount,
+        uint256 rewardAmount,
+        uint256 tokensPerInterval,
+        uint256 amountOfTimeToWaitForRewards
+    ) public {
+        vm.assume(depositAmount > lossAmount);
+        // Div because we have to send to other users too
+        vm.assume(depositAmount < rewardTracker.depositCap() / 4);
+        vm.assume(rewardAmount < rewardTracker.depositCap() / 100000);
+        vm.assume(tokensPerInterval < WETH.totalSupply() / 2);
+        vm.assume(amountOfTimeToWaitForRewards < 60 * 60 * 24);
+        vm.assume(
+            tokensPerInterval * amountOfTimeToWaitForRewards <
+                WETH.balanceOf(address(this)) / 2
+        );
+        // Stack too deep :(
+        Users memory users = Users({
+            user: address(123),
+            user2: address(1234),
+            user3: address(12345)
+        });
+
+        myc.transfer(users.user, depositAmount);
+        myc.approve(address(mycLend), depositAmount);
+        mycLend.deposit(depositAmount, address(this));
+        vm.prank(users.user);
+        myc.approve(address(mycLend), depositAmount);
+        vm.prank(users.user);
+        mycLend.deposit(depositAmount, users.user);
+
+        // Cycle time ended, start new cycle. 30 wei rewards. these go to last weeks stakers. Of which, there are none.
+        vm.warp(block.timestamp + FOUR_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        // Now, cycle = 1. Rewards for last cycle = 0, but dust == rewardAmount
+
+        // Get inside the preCycleTimelock window
+        vm.warp(block.timestamp + EIGHT_DAYS - (TWO_HOURS / 2));
+
+        vm.warp(block.timestamp + TWO_HOURS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
+
+        // Rewards for each users.user should be rewardAmount (Because 2x rewardAmount has been given)
+
+        // Allow for some rounding, because dust will always be accounted for in newCycle
+        uint256 claimableAmount1 = mycLend.getClaimableAmount(address(this));
+        uint256 claimableAmount2 = mycLend.getClaimableAmount(users.user);
+        assertApproxEqAbs(
+            claimableAmount1,
+            rewardAmount,
+            1 + mycLend.dust() / 2
+        );
+        assertApproxEqAbs(
+            claimableAmount2,
+            rewardAmount,
+            1 + mycLend.dust() / 2
+        );
+
+        // UPGRADE
+        upgradeToV2();
+        mycLendV2 = LentMycWithMigration(address(mycLend));
+        address migrator = address(999);
+        mycLendV2.setV2RewardTrackerAndMigrator(
+            address(rewardTracker),
+            migrator
+        );
+
+        address[] memory addressList = new address[](2);
+        addressList[0] = address(this);
+        addressList[1] = users.user;
+        // Migrate address(this) and user's balance.
+        vm.prank(migrator);
+        mycLendV2.multiMigrate(addressList);
+
+        // Claimable amount shouldn't change
+        claimableAmount1 = mycLendV2.getClaimableAmount(address(this));
+        assertApproxEqAbs(
+            claimableAmount1,
+            rewardAmount,
+            1 + mycLendV2.dust() / 2
+        );
+
+        // Set rewards in new contract
+        rewardDistributor.updateLastDistributionTime();
+        WETH.transfer(
+            address(rewardDistributor),
+            tokensPerInterval * amountOfTimeToWaitForRewards
+        );
+        rewardDistributor.setTokensPerInterval(tokensPerInterval);
+        vm.warp(block.timestamp + amountOfTimeToWaitForRewards);
+
+        uint256 claimable = rewardTracker.claimable(users.user);
+        assertApproxEqAbs(
+            (tokensPerInterval * amountOfTimeToWaitForRewards) / 2,
+            claimable,
+            1
+        );
+
+        uint256 preBal = WETH.balanceOf(users.user);
+        vm.prank(users.user);
+        rewardTracker.claim(users.user);
+        uint256 postBal = WETH.balanceOf(users.user);
+        assertApproxEqAbs(
+            preBal + (tokensPerInterval * amountOfTimeToWaitForRewards) / 2,
+            postBal,
+            1
+        );
+
+        claimable = rewardTracker.claimable(address(this));
+        assertApproxEqAbs(
+            claimable,
+            (tokensPerInterval * amountOfTimeToWaitForRewards) / 2,
+            1
+        );
+
+        preBal = WETH.balanceOf(address(this));
+        rewardTracker.claim(address(this));
+        postBal = WETH.balanceOf(address(this));
+        assertApproxEqAbs(
+            postBal,
+            preBal + (tokensPerInterval * amountOfTimeToWaitForRewards) / 2,
+            1
+        );
+
+        mycLendV2.claim(false, "");
+
+        claimableAmount1 = mycLendV2.getClaimableAmount(address(this));
+        assertEq(claimableAmount1, 0);
+
+        // Throughout this, rewards shouldn't have changed.
+        claimableAmount2 = mycLendV2.getClaimableAmount(users.user);
+        assertApproxEqAbs(
+            claimableAmount2,
+            rewardAmount,
+            1 + mycLendV2.dust() / 2
+        );
+    }
+
     function testUpgradeThenMigrateWithRewards(
         uint256 depositAmount,
         uint256 lossAmount,
@@ -183,6 +323,13 @@ contract Migration is Test {
         );
         rewardDistributor.setTokensPerInterval(tokensPerInterval);
         vm.warp(block.timestamp + amountOfTimeToWaitForRewards);
+
+        uint256 claimable = rewardTracker.claimable(address(this));
+        assertApproxEqAbs(
+            tokensPerInterval * amountOfTimeToWaitForRewards,
+            claimable,
+            1
+        );
 
         uint256 preBal = WETH.balanceOf(address(this));
         rewardTracker.claim(address(this));
