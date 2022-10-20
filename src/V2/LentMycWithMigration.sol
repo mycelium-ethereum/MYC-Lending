@@ -10,7 +10,7 @@ import {Address} from "openzeppelin-contracts/contracts/utils/Address.sol";
 import {IMycBuyer} from "../interfaces/IMycBuyer.sol";
 import {ReentrancyGuard} from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
 
-import "forge-std/console.sol";
+import {IRewardTracker} from "../interfaces/IRewardTracker.sol";
 
 interface ISelfTransfer {
     function selfTransfer(address to, uint256 amount) external returns (bool);
@@ -25,7 +25,11 @@ interface ISelfTransfer {
  *          - You get your lMYC tokens at the end of the cycle, rather than instantly.
  * @dev A cycle can start whenever `gov` calls `newCycle`, as long as `block.timestamp > cycleStartTime + cycleLength - preCycleTimelock`.
  */
-contract LentMyc is ERC20Upgradeable, UUPSUpgradeable, ReentrancyGuard {
+contract LentMycWithMigration is
+    ERC20Upgradeable,
+    UUPSUpgradeable,
+    ReentrancyGuard
+{
     /// @custom:invariant `trueBalanceOf(user)` always equals what `balanceOf` equals immediately after a call to `updateUser(user)`.
     /// @custom:invariant After updateUser is called, there should be no deposits or withdrawals that were made in a cycle prior to the current one. i.e. they should be deleted.
     /// @custom:invariant After updateUser is called, the user should have their shares balance increased by `deposit_asset_amount * total_share_supply / total_assets`, or by `deposit_asset_amount` if `total_share_supply = 0`.
@@ -155,6 +159,19 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable, ReentrancyGuard {
     /// @notice The asset being managed by the vault (eg MYC).
     ERC20 public asset;
 
+    address public v2RewardTracker;
+    address public permissionedMigrator;
+    bool public depositWithdrawPaused;
+
+    /// @notice Emit an event when a user migrates their staked MYC.
+    event Migrated(address user, uint256 amount);
+    /// @notice Emit an event when gov sets the v2RewardTracker address.
+    event V2RewardTrackerSet(address v2RewardTracker);
+    /// @notice Emit an event when gov sets the permissionedMigrator address.
+    event PermissionedMigratorSet(address permissionedMigrator);
+    /// @notice Emit an event when gov sets depositWithdrawPaused
+    event DepositWithdrawPausedSet(bool newDepositWithdrawPaused);
+
     /*//////////////////////////////////////////////////////////////
                               MODIFIERS
     //////////////////////////////////////////////////////////////*/
@@ -168,6 +185,10 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable, ReentrancyGuard {
     }
     modifier onlyUnpaused() {
         require(!paused, "paused");
+        _;
+    }
+    modifier onlyUnpausedDepositWithdraw() {
+        require(!depositWithdrawPaused, "Deposit/Withdraw paused");
         _;
     }
 
@@ -317,7 +338,7 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable, ReentrancyGuard {
         uint256 assets,
         address from,
         address receiver
-    ) internal {
+    ) internal onlyUnpausedDepositWithdraw {
         require(assets > 0, "assets == 0");
         // We are inside the 2 hour window: after users can deposit for next cycle, but before next cycle has started.
         require(
@@ -350,7 +371,7 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable, ReentrancyGuard {
         uint256 shares,
         address receiver,
         address owner
-    ) external virtual onlyUnpaused nonReentrant {
+    ) external virtual onlyUnpaused onlyUnpausedDepositWithdraw nonReentrant {
         // We want to be compliant with ERC4626, but only want msg.sender to be able to control their own assets.
         require(receiver == msg.sender, "receiver != msg.sender");
         require(owner == msg.sender, "owner != msg.sender");
@@ -784,6 +805,8 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable, ReentrancyGuard {
         emit SignalSetAdmin(_admin);
     }
 
+    // TODO add separate pause for everything except claiming rewards.
+
     /**
      * @notice Claims `pendingNewAdmin` as the new `admin` address.
      * @dev `signalSetAdmin` sets `pendingNewAdmin`. `claimAdmin` sets `admin` as `pendingNewAdmin`.
@@ -840,6 +863,55 @@ contract LentMyc is ERC20Upgradeable, UUPSUpgradeable, ReentrancyGuard {
 
     function maxDeposit(address) external pure returns (uint256) {
         return type(uint256).max;
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                        V2 MIGRATION FUNCTIONS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Set the MYC Staking V2 RewardTracker contract address, and the permissionedMigrator address.
+     * @param _v2RewardTracker The new v2RewardTracker address.
+     * @param _permissionedMigrator The EOA that can migrate on peoples' behalves.
+     */
+    function setV2RewardTrackerAndMigrator(
+        address _v2RewardTracker,
+        address _permissionedMigrator
+    ) external onlyGov {
+        v2RewardTracker = _v2RewardTracker;
+        permissionedMigrator = _permissionedMigrator;
+        emit V2RewardTrackerSet(_v2RewardTracker);
+        emit PermissionedMigratorSet(_permissionedMigrator);
+    }
+
+    function setDepositWithdrawPaused(bool _depositWithdrawPaused)
+        external
+        onlyGov
+    {
+        depositWithdrawPaused = _depositWithdrawPaused;
+        emit DepositWithdrawPausedSet(_depositWithdrawPaused);
+    }
+
+    /**
+     * @notice Transfer tokens to the new RewardTracker contract, staking on behalf of the msg.sender.
+     * @dev We actively avoid interfering too heavily with V1 accounting. This adds complexity and we have control over withdrawals and rewards so this is avoided.
+     *      We also want people to be able to claim any past rewards in this contract. Modifying their balance here will impact this.
+     */
+    function migrate(address _user) external {
+        require(
+            msg.sender == _user || msg.sender == permissionedMigrator,
+            "msg.sender cannot migrate"
+        );
+        uint256 trueBal = trueBalanceOf(_user);
+        // Since at time of migration, LMYC and MYC have a 1:1 ratio, we can migrate their whole trueBalance over.
+        asset.approve(v2RewardTracker, trueBal); // Could approve all at initialization, but this makes it easier to reason about migration logic.
+        IRewardTracker(v2RewardTracker).stakeForAccount(
+            address(this),
+            _user,
+            address(asset),
+            trueBal
+        );
+        emit Migrated(_user, trueBal);
     }
 
     /**

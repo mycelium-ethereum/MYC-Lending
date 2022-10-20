@@ -1,16 +1,23 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.6.12;
+pragma solidity ^0.8.13;
 
-import "../libraries/SafeMath.sol";
-import "../libraries/IERC20.sol";
-import "../libraries/SafeERC20.sol";
-import "../libraries/ReentrancyGuard.sol";
+import {SafeMath} from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import "../interfaces/IRewardDistributor.sol";
 import "../interfaces/IRewardTracker.sol";
 import "../access/Governable.sol";
 
-contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
+contract RewardTracker is
+    IERC20,
+    UUPSUpgradeable,
+    ReentrancyGuard,
+    IRewardTracker,
+    Governable
+{
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -47,7 +54,10 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
     bool public inPrivateClaimingMode;
     mapping(address => bool) public isHandler;
 
+    uint256 public depositCap = 100_000_000 * 1e18;
+
     event Claim(address receiver, uint256 amount);
+    event SetDepositCap(uint256 oldCap, uint256 newCap);
 
     function initialize(
         address _gov,
@@ -256,6 +266,7 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
         uint256 nextCumulativeRewardPerToken = cumulativeRewardPerToken.add(
             pendingRewards.div(supply)
         );
+
         return
             claimableReward[_account].add(
                 stakedAmount
@@ -366,6 +377,7 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
         require(isHandler[msg.sender], "RewardTracker: forbidden");
     }
 
+    // TODO put a deposit cap
     function _stake(
         address _fundingAccount,
         address _account,
@@ -376,6 +388,10 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
         require(
             isDepositToken[_depositToken],
             "RewardTracker: invalid _depositToken"
+        );
+        require(
+            _amount + totalSupply <= depositCap,
+            "RewardTracker: depositCap exceeded"
         );
 
         IERC20(_depositToken).safeTransferFrom(
@@ -484,5 +500,25 @@ contract RewardTracker is IERC20, ReentrancyGuard, IRewardTracker, Governable {
                 cumulativeRewards[_account] = nextCumulativeReward;
             }
         }
+    }
+
+    /*//////////////////////////////////////////////////////////////
+                               MYC FUNCS
+    //////////////////////////////////////////////////////////////*/
+
+    /**
+     * @notice Sets the a new value for the maximum supply of the RewardTracker ERC20.
+     * @param _newCap The new `depositCap` value.
+     */
+    function setDepositCap(uint256 _newCap) external onlyGov {
+        uint256 oldCap = depositCap;
+        depositCap = _newCap;
+        emit SetDepositCap(oldCap, _newCap);
+    }
+
+    function _authorizeUpgrade(
+        address /*newImplementation*/
+    ) internal view override {
+        require(msg.sender == gov, "onlyGov");
     }
 }

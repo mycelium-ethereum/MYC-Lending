@@ -1,17 +1,23 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity 0.6.12;
+pragma solidity ^0.8.13;
 
-import "../libraries/SafeMath.sol";
-import "../libraries/IERC20.sol";
-import "../libraries/SafeERC20.sol";
-import "../libraries/ReentrancyGuard.sol";
+import {SafeMath} from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
+import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
+import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
+import {ReentrancyGuard} from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import "../interfaces/IRewardDistributor.sol";
 import "../interfaces/IRewardTracker.sol";
 import "../access/Governable.sol";
 
-contract RewardDistributor is IRewardDistributor, ReentrancyGuard, Governable {
+contract RewardDistributor is
+    IRewardDistributor,
+    UUPSUpgradeable,
+    ReentrancyGuard,
+    Governable
+{
     using SafeMath for uint256;
     using SafeERC20 for IERC20;
 
@@ -27,7 +33,7 @@ contract RewardDistributor is IRewardDistributor, ReentrancyGuard, Governable {
     event TokensPerIntervalChange(uint256 amount);
 
     function initialize(
-        address gov,
+        address _gov,
         address _rewardToken,
         address _rewardTracker
     ) external {
@@ -35,7 +41,7 @@ contract RewardDistributor is IRewardDistributor, ReentrancyGuard, Governable {
         isInitialized = true;
         rewardToken = _rewardToken;
         rewardTracker = _rewardTracker;
-        gov = msg.sender;
+        gov = _gov;
     }
 
     // to help users who accidentally send their tokens to this contract
@@ -91,5 +97,11 @@ contract RewardDistributor is IRewardDistributor, ReentrancyGuard, Governable {
 
         emit Distribute(amount);
         return amount;
+    }
+
+    function _authorizeUpgrade(
+        address /*newImplementation*/
+    ) internal view override {
+        require(msg.sender == gov, "onlyGov");
     }
 }
