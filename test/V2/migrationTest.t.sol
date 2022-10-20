@@ -167,6 +167,10 @@ contract Migration is Test {
         vm.prank(migrator);
         mycLendV2.migrate(address(this));
 
+        vm.expectRevert("User already migrated");
+        vm.prank(migrator);
+        mycLendV2.migrate(address(this));
+
         // Claimable amount shouldn't change
         claimableAmount1 = mycLendV2.getClaimableAmount(address(this));
         assertApproxEqAbs(

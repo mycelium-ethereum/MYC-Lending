@@ -162,6 +162,7 @@ contract LentMycWithMigration is
     address public v2RewardTracker;
     address public permissionedMigrator;
     bool public depositWithdrawPaused;
+    mapping(address => bool) public hasMigrated;
 
     /// @notice Emit an event when a user migrates their staked MYC.
     event Migrated(address user, uint256 amount);
@@ -221,8 +222,6 @@ contract LentMycWithMigration is
         emit SetDepositCap(0, _depositCap);
         emit NewAdmin(address(0), _admin);
     }
-
-    // TODO cancel deposit/withdrawal request. Make sure can't do during 2 hour window
 
     /**
      * @notice Updates a users lentMYC, MYC balances, and ETH rewards.
@@ -902,6 +901,8 @@ contract LentMycWithMigration is
             msg.sender == _user || msg.sender == permissionedMigrator,
             "msg.sender cannot migrate"
         );
+        require(!hasMigrated[_user], "User already migrated");
+        hasMigrated[_user] = true;
         uint256 trueBal = trueBalanceOf(_user);
         // Since at time of migration, LMYC and MYC have a 1:1 ratio, we can migrate their whole trueBalance over.
         asset.approve(v2RewardTracker, trueBal); // Could approve all at initialization, but this makes it easier to reason about migration logic.
