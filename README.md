@@ -26,4 +26,5 @@
     - RewardDistributor proxy.
 15. Call `LentMycWithMigration.setDepositWithdrawPaused(true)`.
 16. Call `LentMycWithMigration.setV2RewardTrackerAndMigrator(address(rewardTrackerProxy), address(permissionedMigrator))`.
-17. Migrate accounts.
+17. Call `RewardTracker.setHandler(address(lentMycWithMigration), true);`.
+18. Migrate accounts.
