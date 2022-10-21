@@ -178,6 +178,12 @@ contract Migration is Test {
             rewardAmount,
             1 + mycLendV2.dust() / 2
         );
+        claimableAmount1 = mycLend.getClaimableAmount(address(this));
+        assertApproxEqAbs(
+            claimableAmount1,
+            rewardAmount,
+            1 + mycLendV2.dust() / 2
+        );
 
         // Set rewards in new contract
         rewardDistributor.updateLastDistributionTime();
