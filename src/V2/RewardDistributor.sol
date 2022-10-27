@@ -27,8 +27,6 @@ contract RewardDistributor is
     address public rewardTracker;
     bool public isInitialized;
 
-    address public admin;
-
     event Distribute(uint256 amount);
     event TokensPerIntervalChange(uint256 amount);
 

@@ -5,7 +5,6 @@ forge build
 
 # BEFORE RUNNING MIGRATION PROCESS:
 #   - Ensure that LentMyc.paused == true.
-#   - Ensure that LentMyc.setInPausedTransferMode == true.
 #   - Ensure a new cycle has recently been started.
 
 # 3. Deploy LentMycWithMigration
@@ -17,7 +16,7 @@ echo "Deployed LentMycWithMigration to address ${lentMycWithMigration}"
 # 4. Call `LentMycWithMigration.initialize` with args `address(0), address(0), 0, 0, 0, 0, address(0)`.
 cast send --rpc-url \
     $RPC_URL --private-key $PRIVATE_KEY $lentMycWithMigration \
-    "initialize(address,address,uint256,uint256,uint256,address)" \
+    "initialize(address,address,uint256,uint256,uint256,uint256,address)" \
     $zeroAddress $zeroAddress "0" "0" "0" "0" $zeroAddress
 
 # 5. Deploy `RewardTracker`.

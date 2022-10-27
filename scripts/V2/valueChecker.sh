@@ -1,0 +1,62 @@
+echo "RewardTracker impl isInitialized: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_IMPL "isInitialized()")"
+echo "RewardDistributor impl isInitialized: $(cast call --rpc-url $RPC_URL $REWARD_DISTRIBUTOR_IMPL "isInitialized()")"
+
+echo ""
+echo "RewardTracker proxy isInitialized: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "isInitialized()")"
+echo "RewardDistributor proxy isInitialized: $(cast call --rpc-url $RPC_URL $REWARD_DISTRIBUTOR_PROXY "isInitialized()")"
+
+echo ""
+echo "RewardTracker gov: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "gov()")"
+echo "RewardDistributor gov: $(cast call --rpc-url $RPC_URL $REWARD_DISTRIBUTOR_PROXY "gov()")"
+
+echo ""
+echo "RewardTracker name: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "name()")"
+echo "RewardTracker symbol: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "symbol()")"
+echo "RewardTracker distributor: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "distributor()")"
+echo "RewardDistributor address: ${REWARD_DISTRIBUTOR_PROXY}"
+
+echo "RewardTracker isRewardToken(myc): $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "isDepositToken(address)" $MYC)"
+echo "RewardTracker isRewardToken(esMyc): $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "isDepositToken(address)" $esMYC)"
+
+echo "RewardTracker totalSupply: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "totalSupply()")"
+echo "RewardTracker cumulativeRewardPerToken: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "cumulativeRewardPerToken()")"
+echo "RewardTracker inPrivateTransferMode: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "inPrivateTransferMode()")"
+echo "RewardTracker inPrivateStakingMode: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "inPrivateStakingMode()")"
+echo "RewardTracker inPrivateClaimingMode: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "inPrivateClaimingMode()")"
+echo "RewardTracker isHandler: $(cast call --rpc-url $RPC_URL $REWARD_TRACKER_PROXY "isHandler(address)" $LMYC)"
+
+echo "RewardDistributor rewardToken: $(cast call --rpc-url $RPC_URL $REWARD_DISTRIBUTOR_PROXY "rewardToken()")"
+echo "RewardDistributor tokensPerInterval: $(cast call --rpc-url $RPC_URL $REWARD_DISTRIBUTOR_PROXY "tokensPerInterval()")"
+echo "RewardDistributor lastDistributionTime: $(cast call --rpc-url $RPC_URL $REWARD_DISTRIBUTOR_PROXY "lastDistributionTime()")"
+echo "RewardDistributor rewardTracker: $(cast call --rpc-url $RPC_URL $REWARD_DISTRIBUTOR_PROXY "rewardTracker()")"
+
+echo "RewardDistributor gov: $(cast call --rpc-url $RPC_URL $REWARD_DISTRIBUTOR_PROXY "gov()")"
+
+echo "V1 staking PROXY:"
+echo "mycBuyer: $(cast call --rpc-url $RPC_URL $LMYC  "mycBuyer()")"
+echo "paused: $(cast call --rpc-url $RPC_URL $LMYC  "paused()")"
+echo "inPausedTransferMode: $(cast call --rpc-url $RPC_URL $LMYC  "inPausedTransferMode()")"
+echo "admin: $(cast call --rpc-url $RPC_URL $LMYC  "admin()")"
+echo "pendingNewAdmin: $(cast call --rpc-url $RPC_URL $LMYC  "pendingNewAdmin()")"
+echo "gov: $(cast call --rpc-url $RPC_URL $LMYC  "gov()")"
+echo "pendingNewGov: $(cast call --rpc-url $RPC_URL $LMYC  "pendingNewGov()")"
+echo "cycleLength: $(cast call --rpc-url $RPC_URL $LMYC  "cycleLength()")"
+echo "cycle: $(cast call --rpc-url $RPC_URL $LMYC  "cycle()")"
+echo "cycleStartTime: $(cast call --rpc-url $RPC_URL $LMYC  "cycleStartTime()")"
+echo "preCycleTimelock: $(cast call --rpc-url $RPC_URL $LMYC  "preCycleTimelock()")"
+
+echo "totalAssets: $(cast call --rpc-url $RPC_URL $LMYC  "totalAssets()")"
+echo "amountDeployed: $(cast call --rpc-url $RPC_URL $LMYC  "amountDeployed()")"
+echo "pendingDeposits: $(cast call --rpc-url $RPC_URL $LMYC  "pendingDeposits()")"
+echo "pendingRedeems: $(cast call --rpc-url $RPC_URL $LMYC  "pendingRedeems()")"
+echo "dust: $(cast call --rpc-url $RPC_URL $LMYC  "dust()")"
+echo "depositCap: $(cast call --rpc-url $RPC_URL $LMYC  "depositCap()")"
+
+echo "asset: $(cast call --rpc-url $RPC_URL $LMYC  "asset()")"
+echo "v2RewardTracker: $(cast call --rpc-url $RPC_URL $LMYC  "v2RewardTracker()")"
+echo "permissionedMigrator: $(cast call --rpc-url $RPC_URL $LMYC  "permissionedMigrator()")"
+echo "depositWithdrawPaused: $(cast call --rpc-url $RPC_URL $LMYC  "depositWithdrawPaused()")"
+
+echo ""
+echo "IMPORTANT NOTE: initialize in LentMyc is private."
+echo "To test that it can not be initialized, make sure a call to initialize will revert"

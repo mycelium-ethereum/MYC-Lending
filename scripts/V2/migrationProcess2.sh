@@ -1,6 +1,7 @@
 # See README.md for migration process.
 
-forge build --use 0.8.13
+forge build
+WETH="0x82af49447d8a07e3bd95bd0d56f35241523fbab1"
 
 # 9. Deploy `ERC1967` (Constructor args: `address(rewardTracker)`, `""`)
 echo "Deploying first proxy"
