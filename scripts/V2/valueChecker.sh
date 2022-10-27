@@ -58,7 +58,7 @@ echo "permissionedMigrator: $(cast call --rpc-url $RPC_URL $LMYC  "permissionedM
 echo "depositWithdrawPaused: $(cast call --rpc-url $RPC_URL $LMYC  "depositWithdrawPaused()")"
 
 echo ""
-echo "IMPORTANT NOTE: initialize in LentMyc is private."
+echo "IMPORTANT NOTE: \`initialized\` in LentMyc is private."
 echo "To test that it can not be initialized, make sure a call to initialize will revert."
 echo "To do so, call: "
 echo "cast send --rpc-url \$RPC_URL --private-key \$PRIVATE_KEY \\"

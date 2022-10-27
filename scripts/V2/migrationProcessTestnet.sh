@@ -16,6 +16,14 @@ a=$(cast send --rpc-url \
     "setPaused(bool)" \
     "true")
 
+echo ""
+echo "Setting inPausedTransferMode of LMYC"
+echo ""
+a=$(cast send --rpc-url \
+    $RPC_URL --private-key $PRIVATE_KEY $LMYC \
+    "setInPausedTransferMode(bool)" \
+    "true")
+
 # BEFORE RUNNING MIGRATION PROCESS:
 #   - Ensure that LentMyc.paused == true.
 #   - Ensure that LentMyc.setInPausedTransferMode == true.
@@ -169,6 +177,7 @@ a=$(cast send --rpc-url \
     "setDepositCap(uint256)" \
     "100000000000000000000000000")
 
+# Note here that we are keeping inPausedTransferMode and paused withdrawal/deposits set to TRUE.
 echo ""
 echo "Unpausing LMYC"
 echo ""

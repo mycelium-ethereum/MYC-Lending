@@ -1,9 +1,6 @@
 preCycleTimelock=`cast call --rpc-url $RPC_URL $LMYC "preCycleTimelock()"`
 cycleStartTime=`cast call --rpc-url $RPC_URL $LMYC "cycleStartTime()"`
 cycleLength=`cast call --rpc-url $RPC_URL $LMYC "cycleLength()"`
-echo $cycleLength
-echo $preCycleTimelock
-echo $cycleStartTime
 cycleWindowClose=$((cycleStartTime + cycleLength - preCycleTimelock))
 echo "Deposit window closing in approx $((cycleWindowClose - $(date +%s))) seconds."
 echo ""

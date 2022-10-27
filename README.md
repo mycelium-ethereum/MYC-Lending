@@ -1,6 +1,6 @@
 # MYC-Lending
 
-### Test the Migration on Testnet
+## Test the Migration on Testnet
 Set env vars
 
 `export RPC_URL=<RPC_URL>`
@@ -9,9 +9,9 @@ Set env vars
 
 `export ACCOUNT=<MAIN_TESTNET_EOA>`
 
-Deploy contracts
+Deploy V1 contracts
 
-`./scripts/V1/deployTestnet.sh`
+`./scripts/V2/deployV1ContractsTestnet.sh`
 
 Run the `export` commands given at the end of the script to set the env vars.
 
@@ -39,9 +39,13 @@ Print out general vault info
 
 Run the migration process
 
-`./scripts/V2/migrationProcess.sh `
+`./scripts/V2/migrationProcessTestnet.sh`
 
 Run the `export` commands given at the end of the script to set the env vars.
+
+Check the values
+
+`./scripts/V2/valueChecker.sh`
 
 Migrate your address
 
@@ -63,7 +67,7 @@ Try to migrate again (should revert)
 
 `cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $LMYC "migrate(address)" $ACCOUNT`
 
-### Migration Process
+## Migration Process
 
 1. `LentMyc.setPaused` (https://arbiscan.io/address/0x9B225FF56C48671d4D04786De068Ed8b88b672d6).
     - Note that this is just a safety precaution.
