@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.13;
 
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
 import {SafeMath} from "@openzeppelin/contracts/utils/math/SafeMath.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "../interfaces/IRewardDistributor.sol";
@@ -12,14 +12,14 @@ import "../interfaces/IRewardTracker.sol";
 import "../access/Governable.sol";
 
 contract RewardTracker is
-    IERC20,
+    IERC20Upgradeable,
     UUPSUpgradeable,
-    ReentrancyGuard,
+    ReentrancyGuardUpgradeable,
     IRewardTracker,
     Governable
 {
     using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     uint256 public constant BASIS_POINTS_DIVISOR = 10000;
     uint256 public constant PRECISION = 1e30;
@@ -54,7 +54,7 @@ contract RewardTracker is
     bool public inPrivateClaimingMode;
     mapping(address => bool) public isHandler;
 
-    uint256 public depositCap = 100_000_000 * 1e18;
+    uint256 public depositCap;
 
     event Claim(address receiver, uint256 amount);
     event SetDepositCap(uint256 oldCap, uint256 newCap);
@@ -119,7 +119,7 @@ contract RewardTracker is
         address _account,
         uint256 _amount
     ) external onlyGov {
-        IERC20(_token).safeTransfer(_account, _amount);
+        IERC20Upgradeable(_token).safeTransfer(_account, _amount);
     }
 
     function balanceOf(address _account)
@@ -293,7 +293,10 @@ contract RewardTracker is
         claimableReward[_account] = 0;
 
         if (tokenAmount > 0) {
-            IERC20(rewardToken()).safeTransfer(_receiver, tokenAmount);
+            IERC20Upgradeable(rewardToken()).safeTransfer(
+                _receiver,
+                tokenAmount
+            );
             emit Claim(_account, tokenAmount);
         }
 
@@ -393,7 +396,7 @@ contract RewardTracker is
             "RewardTracker: depositCap exceeded"
         );
 
-        IERC20(_depositToken).safeTransferFrom(
+        IERC20Upgradeable(_depositToken).safeTransferFrom(
             _fundingAccount,
             address(this),
             _amount
@@ -443,7 +446,7 @@ contract RewardTracker is
             .sub(_amount);
 
         _burn(_account, _amount);
-        IERC20(_depositToken).safeTransfer(_receiver, _amount);
+        IERC20Upgradeable(_depositToken).safeTransfer(_receiver, _amount);
     }
 
     function _updateRewards(address _account) private {
