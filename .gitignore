@@ -25,4 +25,4 @@ typechain-types
 cache
 artifacts
 
-*flattened.sol
+flattened.sol
