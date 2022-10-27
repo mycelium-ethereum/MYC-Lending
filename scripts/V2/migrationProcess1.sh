@@ -1,6 +1,7 @@
 # See README.md for migration process.
 
 zeroAddress="0x0000000000000000000000000000000000000000"
+forge build
 
 # BEFORE RUNNING MIGRATION PROCESS:
 #   - Ensure that LentMyc.paused == true.
