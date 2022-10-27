@@ -1,5 +1,5 @@
 decimals="18"
-cycleLength="30" # 2.5 minutes
+cycleLength="70"
 firstCycleStart="1661235795"
 preCycleTimelock="5"
 # 100,000

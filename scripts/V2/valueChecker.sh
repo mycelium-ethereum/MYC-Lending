@@ -59,4 +59,8 @@ echo "depositWithdrawPaused: $(cast call --rpc-url $RPC_URL $LMYC  "depositWithd
 
 echo ""
 echo "IMPORTANT NOTE: initialize in LentMyc is private."
-echo "To test that it can not be initialized, make sure a call to initialize will revert"
+echo "To test that it can not be initialized, make sure a call to initialize will revert."
+echo "To do so, call: "
+echo "cast send --rpc-url \$RPC_URL --private-key \$PRIVATE_KEY \\"
+echo "$LMYC \"initialize(address,address,uint256,uint256,uint256,uint256,address)\"\\"
+echo " \"0x0000000000000000000000000000000000000000\" \"0x0000000000000000000000000000000000000000\" 0 0 0 0 \"0x0000000000000000000000000000000000000000\""

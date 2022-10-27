@@ -8,6 +8,14 @@ NC='\033[0m' # No Color
 
 forge build
 
+echo ""
+echo "Pausing LMYC"
+echo ""
+a=$(cast send --rpc-url \
+    $RPC_URL --private-key $PRIVATE_KEY $LMYC \
+    "setPaused(bool)" \
+    "true")
+
 # BEFORE RUNNING MIGRATION PROCESS:
 #   - Ensure that LentMyc.paused == true.
 #   - Ensure that LentMyc.setInPausedTransferMode == true.
@@ -134,7 +142,7 @@ echo ""
 a=$(cast send --rpc-url \
     $RPC_URL --private-key $PRIVATE_KEY $LMYC \
     "setV2RewardTrackerAndMigrator(address,address)" \
-    $rewardTracker $ACCOUNT)
+    $rewardTrackerProxy $ACCOUNT)
 
 echo ""
 echo -e "${GREEN}Setting RewardTracker handler...${NC}"
@@ -151,6 +159,23 @@ a=$(cast send --rpc-url \
     $RPC_URL --private-key $PRIVATE_KEY $rewardTrackerProxy \
     "setInPrivateTransferMode(bool)" \
     "true")
+
+
+echo ""
+echo -e "${GREEN}Setting \`RewardTracker.depositCap\`${NC}"
+echo ""
+a=$(cast send --rpc-url \
+    $RPC_URL --private-key $PRIVATE_KEY $rewardTrackerProxy \
+    "setDepositCap(uint256)" \
+    "100000000000000000000000000")
+
+echo ""
+echo "Unpausing LMYC"
+echo ""
+a=$(cast send --rpc-url \
+    $RPC_URL --private-key $PRIVATE_KEY $LMYC \
+    "setPaused(bool)" \
+    "false")
 
 echo "export REWARD_TRACKER_PROXY=${rewardTrackerProxy} ; \\"
 echo "export REWARD_DISTRIBUTOR_PROXY=${rewardDistributorProxy} ;\\"

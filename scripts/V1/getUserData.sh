@@ -1,4 +1,3 @@
-echo "lentMYC.totalSupply: "
 echo "1"
 deposits=`cast call --rpc-url $RPC_URL $LMYC "userPendingDeposits(address)" $ACCOUNT`
 printf "Pending Deposits: ${deposits}\n"
