@@ -2,10 +2,9 @@
 
 pragma solidity ^0.8.13;
 
-import {SafeMath} from "openzeppelin-contracts/contracts/utils/math/SafeMath.sol";
-import {IERC20} from "openzeppelin-contracts/contracts/token/ERC20/IERC20.sol";
-import {SafeERC20} from "openzeppelin-contracts/contracts/token/ERC20/utils/SafeERC20.sol";
-import {ReentrancyGuard} from "openzeppelin-contracts/contracts/security/ReentrancyGuard.sol";
+import {IERC20Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/IERC20Upgradeable.sol";
+import {SafeERC20Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
 import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
 
 import "../interfaces/IRewardDistributor.sol";
@@ -15,11 +14,10 @@ import "../access/Governable.sol";
 contract RewardDistributor is
     IRewardDistributor,
     UUPSUpgradeable,
-    ReentrancyGuard,
+    ReentrancyGuardUpgradeable,
     Governable
 {
-    using SafeMath for uint256;
-    using SafeERC20 for IERC20;
+    using SafeERC20Upgradeable for IERC20Upgradeable;
 
     address public override rewardToken;
     uint256 public override tokensPerInterval;
@@ -48,7 +46,7 @@ contract RewardDistributor is
         address _account,
         uint256 _amount
     ) external onlyGov {
-        IERC20(_token).safeTransfer(_account, _amount);
+        IERC20Upgradeable(_token).safeTransfer(_account, _amount);
     }
 
     function updateLastDistributionTime() external onlyGov {
@@ -70,8 +68,8 @@ contract RewardDistributor is
             return 0;
         }
 
-        uint256 timeDiff = block.timestamp.sub(lastDistributionTime);
-        return tokensPerInterval.mul(timeDiff);
+        uint256 timeDiff = block.timestamp - lastDistributionTime;
+        return tokensPerInterval * timeDiff;
     }
 
     function distribute() external override returns (uint256) {
@@ -86,12 +84,14 @@ contract RewardDistributor is
 
         lastDistributionTime = block.timestamp;
 
-        uint256 balance = IERC20(rewardToken).balanceOf(address(this));
+        uint256 balance = IERC20Upgradeable(rewardToken).balanceOf(
+            address(this)
+        );
         if (amount > balance) {
             amount = balance;
         }
 
-        IERC20(rewardToken).safeTransfer(msg.sender, amount);
+        IERC20Upgradeable(rewardToken).safeTransfer(msg.sender, amount);
 
         emit Distribute(amount);
         return amount;

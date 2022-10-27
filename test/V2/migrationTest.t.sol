@@ -93,6 +93,7 @@ contract Migration is Test {
             address(rewardDistributor)
         );
         rewardTracker.setHandler(address(mycLend), true);
+        rewardTracker.setDepositCap(100000000e18);
     }
 
     function testUpgradeThenMultiMigrateWithRewards(
