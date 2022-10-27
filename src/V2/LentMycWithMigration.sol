@@ -896,7 +896,7 @@ contract LentMycWithMigration is
      * @dev We actively avoid interfering too heavily with V1 accounting. This adds complexity and we have control over withdrawals and rewards so this is avoided.
      *      We also want people to be able to claim any past rewards in this contract. Modifying their balance here will impact this.
      */
-    function migrate(address _user) external {
+    function migrate(address _user) public {
         require(
             msg.sender == _user || msg.sender == permissionedMigrator,
             "msg.sender cannot migrate"
@@ -913,6 +913,12 @@ contract LentMycWithMigration is
             trueBal
         );
         emit Migrated(_user, trueBal);
+    }
+
+    function multiMigrate(address[] calldata _users) external {
+        for (uint256 i = 0; i < _users.length; i++) {
+            migrate(_users[i]);
+        }
     }
 
     /**
