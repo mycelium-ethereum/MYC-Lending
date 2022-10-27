@@ -573,6 +573,16 @@
   resolved "https://registry.yarnpkg.com/@nomiclabs/hardhat-ethers/-/hardhat-ethers-2.2.1.tgz#8057b43566a0e41abeb8142064a3c0d3f23dca86"
   integrity sha512-RHWYwnxryWR8hzRmU4Jm/q4gzvXpetUOJ4OPlwH2YARcDB+j79+yAYCwO0lN1SUOb4++oOTJEe6AWLEc42LIvg==
 
+"@openzeppelin/contracts-upgradeable@^4.7.3":
+  version "4.7.3"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts-upgradeable/-/contracts-upgradeable-4.7.3.tgz#f1d606e2827d409053f3e908ba4eb8adb1dd6995"
+  integrity sha512-+wuegAMaLcZnLCJIvrVUDzA9z/Wp93f0Dla/4jJvIhijRrPabjQbZe6fWiECLaJyfn5ci9fqf9vTw3xpQOad2A==
+
+"@openzeppelin/contracts@^4.7.3":
+  version "4.7.3"
+  resolved "https://registry.yarnpkg.com/@openzeppelin/contracts/-/contracts-4.7.3.tgz#939534757a81f8d69cc854c7692805684ff3111e"
+  integrity sha512-dGRS0agJzu8ybo44pCIf3xBaPQN/65AIXNgK8+4gzKd5kbvlqyxryUYVLJv7fK98Seyd2hDZzVEHSWAh0Bt1Yw==
+
 "@openzeppelin/hardhat-upgrades@^1.21.0":
   version "1.21.0"
   resolved "https://registry.yarnpkg.com/@openzeppelin/hardhat-upgrades/-/hardhat-upgrades-1.21.0.tgz#e90fb7d858093f35a300b3a5a2fd32bca6179dfc"
@@ -2235,6 +2245,11 @@ solidity-ast@^0.4.15:
   version "0.4.35"
   resolved "https://registry.yarnpkg.com/solidity-ast/-/solidity-ast-0.4.35.tgz#82e064b14dc989338123264bde2235cad751f128"
   integrity sha512-F5bTDLh3rmDxRmLSrs3qt3nvxJprWSEkS7h2KmuXDx7XTfJ6ZKVTV1rtPIYCqJAuPsU/qa8YUeFn7jdOAZcTPA==
+
+solmate@^6.6.1:
+  version "6.6.1"
+  resolved "https://registry.yarnpkg.com/solmate/-/solmate-6.6.1.tgz#f0907e1cdada6dd5fbfe11811ab545162b713197"
+  integrity sha512-WHvRXQvGtgR6R9nmkDTz/d+oULMqf/D33rlzQyadTX2SbuTmaW7ToEjGjGtWUVCQwZsZ/JP3vbOEVv7fB50btg==
 
 source-map-support@^0.5.13:
   version "0.5.21"

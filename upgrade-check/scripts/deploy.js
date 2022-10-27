@@ -7,25 +7,26 @@
 const hre = require("hardhat");
 
 async function main() {
-  const currentTimestampInSeconds = Math.round(Date.now() / 1000);
-  const ONE_YEAR_IN_SECS = 365 * 24 * 60 * 60;
-  const unlockTime = currentTimestampInSeconds + ONE_YEAR_IN_SECS;
+    // scripts/create-box.js
+    const { ethers, upgrades } = require("hardhat");
 
-  const lockedAmount = hre.ethers.utils.parseEther("1");
+    async function main() {
+        const LentMyc = await ethers.getContractFactory("LentMyc");
+        const lMyc = await upgrades.deployProxy(LentMyc, [ethers.constants.AddressZero, (await ethers.getSigners())[0].address, 0, 0, 0, 0, (await ethers.getSigners())[0].address]);
+        await lMyc.deployed();
+        console.log("lMyc deployed to:", lMyc.address);
+        const LentMycV2 = await ethers.getContractFactory("LentMycWithMigration");
+        console.log(1)
+        const lMyc2 = await upgrades.upgradeProxy(lMyc.address, LentMycV2);
+        console.log("lMyc2 upgraded to:", lMyc2.address);
+    }
 
-  const Lock = await hre.ethers.getContractFactory("Lock");
-  const lock = await Lock.deploy(unlockTime, { value: lockedAmount });
-
-  await lock.deployed();
-
-  console.log(
-    `Lock with 1 ETH and unlock timestamp ${unlockTime} deployed to ${lock.address}`
-  );
+    main();
 }
 
 // We recommend this pattern to be able to use async/await everywhere
 // and properly handle errors.
 main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
+    console.error(error);
+    process.exitCode = 1;
 });
