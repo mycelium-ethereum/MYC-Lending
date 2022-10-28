@@ -1,6 +1,8 @@
 # See README.md for migration process.
 
 zeroAddress="0x0000000000000000000000000000000000000000"
+LBLUE='\033[1;36m'
+NC='\033[0m' # No Color
 forge build
 
 # BEFORE RUNNING MIGRATION PROCESS:
@@ -43,9 +45,8 @@ cast send --rpc-url \
     "initialize(address,address,address)" \
     $zeroAddress $zeroAddress $zeroAddress
 
-LBLUE='\033[1;36m'
 echo ""
-echo -e "${LBLUE}--- NEXT STEPS ---"
+echo -e "${LBLUE}--- NEXT STEPS ---${NC}"
 echo "Ensure rewardDistributor.isInitialized == true, rewardTracker.isInitialized == true, and lentMycWithMigration.initialize is reverting."
-echo "Then run \`export REWARD_DISTRIBUTOR=\"${rewardDistributor}\" && export REWARD_TRACKER=\"${rewardTracker}\"  && export LMYC_WITH_MIGRATION=\"${lentMycWithMigration}\" \`"
+echo "Then run \`export REWARD_DISTRIBUTOR_IMPL=\"${rewardDistributor}\" && export REWARD_TRACKER_IMPL=\"${rewardTracker}\"  && export LMYC_WITH_MIGRATION=\"${lentMycWithMigration}\" \`"
 echo "Then run \`./scripts/migrationProcess2.sh\`"

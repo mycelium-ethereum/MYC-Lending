@@ -1,6 +1,7 @@
 LBLUE='\033[1;36m'
+NC='\033[0m' # No Color
 echo ""
-echo -e "${LBLUE}--- NEXT STEPS ---"
+echo -e "${LBLUE}--- NEXT STEPS ---${NC}"
 echo "Ensure lentMyc variables are all set correctly"
 echo "Then Verify all contracts on Etherscan."
 echo "12. Upgrade `LentMyc` to `LentMycWithMigration`.
