@@ -62,38 +62,38 @@ contract Redeem is Test {
         vm.prank(user);
         mycLend.deposit(depositAmount, user);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
         assertEq(mycLend.totalAssets(), 100 + depositAmount);
         // mycLend.redeem(depositAmount, address(this), address(this));
         vm.prank(user);
         mycLend.deposit(depositAmount, user);
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
         assertEq(mycLend.totalAssets(), 100 + depositAmount * 2);
         mycLend.deposit(depositAmount, address(this));
         vm.prank(user);
         mycLend.deposit(depositAmount, user);
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
         assertEq(mycLend.totalAssets(), 100 + depositAmount * 4);
         mycLend.deposit(depositAmount, address(this));
         vm.prank(user);
         mycLend.deposit(depositAmount, user);
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
         assertEq(mycLend.totalAssets(), 100 + depositAmount * 6);
         mycLend.deposit(depositAmount, address(this));
         vm.prank(user);
         mycLend.deposit(depositAmount, user);
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
         assertEq(mycLend.totalAssets(), 100 + depositAmount * 8);
         mycLend.deposit(depositAmount, address(this));
         vm.prank(user);
         mycLend.deposit(depositAmount, user);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
         assertEq(mycLend.totalAssets(), 100 + depositAmount * 10);
 
@@ -101,7 +101,7 @@ contract Redeem is Test {
         vm.prank(user);
         mycLend.redeem(bal, user, user);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
     }
 }

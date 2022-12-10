@@ -1,11 +1,14 @@
-gov="0xc18fcFFD8c9173faB1684Ec1EEE32976f780B13E"
 decimals="18"
-cycleLength="300" # 5 minutes
+cycleLength="70"
 firstCycleStart="1661235795"
-preCycleTimelock="60"
+preCycleTimelock="5"
 # 100,000
 depositCap="100000000000000000000000"
-admin="0xc18fcFFD8c9173faB1684Ec1EEE32976f780B13E"
+
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+echo -e "${RED}Make sure you have set the ACCOUNT environment variable.${NC}"
+echo ""
 
 forge build
 
@@ -15,6 +18,20 @@ mycTokenOutput=$(forge create --rpc-url $RPC_URL \
 arr=($mycTokenOutput)
 myc=${arr[9]}
 echo "Deployed test MYC to address ${myc}"
+
+mycTokenOutput=$(forge create --rpc-url $RPC_URL \
+    --constructor-args "Escrowed Mycelium" "esMYC" "18" \
+    --private-key $PRIVATE_KEY src/token/Myc.sol:Myc)
+arr=($mycTokenOutput)
+esMyc=${arr[9]}
+echo "Deployed test esMYC to address ${esMyc}"
+
+wethOutput=$(forge create --rpc-url $RPC_URL \
+    --constructor-args "Wrapped Ether" "WETH" "18" \
+    --private-key $PRIVATE_KEY src/token/Token.sol:Token)
+arr=($wethOutput)
+weth=${arr[9]}
+echo "Deployed test WETH to address ${weth}"
 
 lentMycOutput=$(forge create --rpc-url $RPC_URL \
     --constructor-args \ # $myc $gov $decimals $cycleLength $firstCycleStart $preCycleTimelock $depositCap \
@@ -40,16 +57,14 @@ echo "PROXY: lentMYC proxy deployed to address ${proxy}"
 echo " "
 
 echo "Initializing..."
-echo $myc $gov $cycleLength $firstCycleStart $preCycleTimelock $depositCap $admin
+echo $myc $ACCOUNT $cycleLength $firstCycleStart $preCycleTimelock $depositCap $ACCOUNT
 cast send --rpc-url \
     $RPC_URL --private-key $PRIVATE_KEY $proxy \
     "initialize(address,address,uint256,uint256,uint256,uint256,address)" \
-    $myc $gov $cycleLength $firstCycleStart $preCycleTimelock $depositCap $admin
-
-echo "hi"
+    $myc $ACCOUNT $cycleLength $firstCycleStart $preCycleTimelock $depositCap $ACCOUNT
 
 dummyMycBuyer=$(forge create --rpc-url $RPC_URL \
-    --constructor-args $myc $gov \
+    --constructor-args $myc $ACCOUNT \
     --private-key $PRIVATE_KEY src/V1/DummyMycBuyer.sol:DummyMycBuyer)
 
 # echo "dummyMycBuyer output: ${dummyMycBuyer}"
@@ -81,4 +96,8 @@ echo "faucet deployed to address ${faucet}"
 echo "Transferring ${balanceToTransfer} to the faucet"
 a=`cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $myc "transfer(address,uint256)" $faucet $balanceToTransfer`
 
-# forge verify-contract ${lMyc} src/LentMyc.sol:LentMyc
+echo ""
+
+echo "\`export MYC=${myc} ; export esMYC=${esMyc} ; \
+export LMYC=${proxy} ; export WETH=${weth} ; \
+ export LMYC_V1_IMPL=${lMyc}\`"

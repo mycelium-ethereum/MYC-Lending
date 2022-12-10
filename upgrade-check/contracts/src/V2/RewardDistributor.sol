@@ -2,10 +2,10 @@
 
 pragma solidity ^0.8.13;
 
-import {IERC20Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/IERC20Upgradeable.sol";
-import {SafeERC20Upgradeable} from "openzeppelin-contracts-upgradeable/contracts/token/ERC20/utils/SafeERC20Upgradeable.sol";
-import {ReentrancyGuardUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/security/ReentrancyGuardUpgradeable.sol";
-import {UUPSUpgradeable} from "openzeppelin-contracts-upgradeable/contracts/proxy/utils/UUPSUpgradeable.sol";
+import {IERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/IERC20Upgradeable.sol";
+import {SafeERC20Upgradeable} from "@openzeppelin/contracts-upgradeable/token/ERC20/utils/SafeERC20Upgradeable.sol";
+import {ReentrancyGuardUpgradeable} from "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import {UUPSUpgradeable} from "@openzeppelin/contracts-upgradeable/proxy/utils/UUPSUpgradeable.sol";
 
 import "../interfaces/IRewardDistributor.sol";
 import "../interfaces/IRewardTracker.sol";
@@ -33,7 +33,7 @@ contract RewardDistributor is
         address _rewardToken,
         address _rewardTracker
     ) external {
-        require(!isInitialized, "RewardDistributor: already initialized");
+        require(!isInitialized, "RewardTracker: already initialized");
         isInitialized = true;
         rewardToken = _rewardToken;
         rewardTracker = _rewardTracker;

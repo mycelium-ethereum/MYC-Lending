@@ -180,7 +180,7 @@ contract RewardTrackerTest is Test {
             1e18 * (1000)
         );
 
-        vm.warp(block.timestamp + 24 * 60 * 60);
+        skip(24 * 60 * 60);
 
         assert(rewardTracker.claimable(users.user) > 1e18 * (1785)); // 50000 / 28 => ~1785
         assert(rewardTracker.claimable(users.user) < 1e18 * (1786));
@@ -213,7 +213,7 @@ contract RewardTrackerTest is Test {
         assertEq(rewardTracker.averageStakedAmounts(users.user2), 0);
         assertEq(rewardTracker.cumulativeRewards(users.user2), 0);
 
-        vm.warp(block.timestamp + (24 * 60 * 60));
+        skip((24 * 60 * 60));
 
         assert(rewardTracker.claimable(users.user) > 1e18 * (1785 + 1190));
         assert(rewardTracker.claimable(users.user) < 1e18 * (1786 + 1191));
@@ -267,7 +267,7 @@ contract RewardTrackerTest is Test {
         assert(WETH.balanceOf(users.user3) > 1e18 * (1785 + 1190));
         assert(WETH.balanceOf(users.user3) < 1e18 * (1786 + 1191));
 
-        vm.warp(block.timestamp + 24 * 60 * 60);
+        skip(24 * 60 * 60);
 
         assertEq(rewardTracker.claimable(users.user), 0);
 
@@ -308,7 +308,7 @@ contract RewardTrackerTest is Test {
         vm.prank(users.user2);
         rewardTracker.unstake(address(esMyc), 1e18 * (501));
 
-        vm.warp(block.timestamp + 2 * 24 * 60 * 60);
+        skip(2 * 24 * 60 * 60);
 
         vm.prank(users.user);
         rewardTracker.claim(users.user3);
@@ -333,7 +333,7 @@ contract RewardTrackerTest is Test {
                 1e18 * (596 + 1786 + 1786 * 2)
         );
 
-        vm.warp(block.timestamp + 2 * 24 * 60 * 60);
+        skip(2 * 24 * 60 * 60);
 
         vm.prank(users.user);
         rewardTracker.claim(users.user3);

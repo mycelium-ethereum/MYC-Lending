@@ -126,16 +126,16 @@ contract Proxy is Test {
         vm.assume(rewardAmount2 < depositCap / 100000);
         vm.assume(rewardAmount2 < address(this).balance / 3);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         lProxy.newCycle{value: rewardAmount}(0, 0);
 
         myc.approve(address(lProxy), type(uint256).max);
         lProxy.deposit(1000, address(this));
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         lProxy.newCycle{value: rewardAmount}(0, 0);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         lProxy.newCycle(0, 0);
 
         myc.transfer(user, 100000 * 10**18);
@@ -147,7 +147,7 @@ contract Proxy is Test {
 
         assertEq(lProxy.userLastUpdated(user), 4);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         lProxy.newCycle{value: rewardAmount2}(0, 0);
 
         assertEq(
@@ -175,7 +175,7 @@ contract Proxy is Test {
         assertEq(lProxy.getClaimableAmount(address(this)), 0);
         assertEq(lProxy.getClaimableAmount(user), 0);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         lProxy.newCycle{value: rewardAmount2}(0, 0);
 
         // (rewardAmount2 / totalSupply) * balance
@@ -206,7 +206,7 @@ contract Proxy is Test {
         vm.prank(user);
         lProxy.redeem(trueBal - 1, user, user);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         lProxy.newCycle(0, 0);
 
         assertApproxEqAbs(
@@ -216,7 +216,7 @@ contract Proxy is Test {
         );
 
         uint256 oldClaimable = lProxy.getClaimableAmount(user);
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         lProxy.newCycle{value: rewardAmount}(0, 0);
         uint256 newClaimable = lProxy.getClaimableAmount(user);
         expectedClaimable =
