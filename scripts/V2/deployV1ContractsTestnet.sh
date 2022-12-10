@@ -5,6 +5,11 @@ preCycleTimelock="5"
 # 100,000
 depositCap="100000000000000000000000"
 
+RED='\033[0;31m'
+NC='\033[0m' # No Color
+echo -e "${RED}Make sure you have set the ACCOUNT environment variable.${NC}"
+echo ""
+
 forge build
 
 mycTokenOutput=$(forge create --rpc-url $RPC_URL \
@@ -91,4 +96,8 @@ echo "faucet deployed to address ${faucet}"
 echo "Transferring ${balanceToTransfer} to the faucet"
 a=`cast send --rpc-url $RPC_URL --private-key $PRIVATE_KEY $myc "transfer(address,uint256)" $faucet $balanceToTransfer`
 
-echo "\`export MYC=${myc} ; export esMYC=${esMyc} ; export LMYC=${proxy} ; export WETH=${weth} ; export LMYC_V1_IMPL=${lMyc}\`"
+echo ""
+
+echo "\`export MYC=${myc} ; export esMYC=${esMyc} ; \
+export LMYC=${proxy} ; export WETH=${weth} ; \
+ export LMYC_V1_IMPL=${lMyc}\`"

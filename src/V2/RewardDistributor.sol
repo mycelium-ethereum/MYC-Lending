@@ -33,7 +33,7 @@ contract RewardDistributor is
         address _rewardToken,
         address _rewardTracker
     ) external {
-        require(!isInitialized, "RewardTracker: already initialized");
+        require(!isInitialized, "RewardDistributor: already initialized");
         isInitialized = true;
         rewardToken = _rewardToken;
         rewardTracker = _rewardTracker;
