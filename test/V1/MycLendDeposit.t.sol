@@ -83,7 +83,7 @@ contract Deposit is Test {
         mycLend.deposit(depositAmount, address(this));
 
         // Cycle time ended, start new cycle
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         mycLend.newCycle(0, 0);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit
@@ -107,7 +107,7 @@ contract Deposit is Test {
         mycLend.deposit(depositAmount, address(this));
 
         // Cycle time ended, start new cycle
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         mycLend.newCycle(0, 0);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit
@@ -122,7 +122,7 @@ contract Deposit is Test {
     function testCannotDepositZero() public {
         uint256 depositAmount = 0;
         myc.approve(address(mycLend), depositAmount);
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         vm.expectRevert("assets == 0");
         mycLend.deposit(depositAmount, address(this));
     }
@@ -133,7 +133,7 @@ contract Deposit is Test {
     function testCannotDepositInPreCycleTimelock() public {
         uint256 depositAmount = 100;
         myc.approve(address(mycLend), depositAmount);
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         vm.expectRevert("Deposit requests locked");
         mycLend.deposit(depositAmount, address(this));
     }
@@ -157,11 +157,11 @@ contract Deposit is Test {
         uint256 lossAmount = 20;
         myc.approve(address(mycLend), depositAmount);
         mycLend.deposit(depositAmount, address(this));
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         mycLend.newCycle(0, 10);
 
         // Cycle time ended, start new cycle
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(lossAmount, 10);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit
@@ -181,11 +181,11 @@ contract Deposit is Test {
         mycLend.deposit(depositAmount, address(this));
 
         // Cycle time ended, start new cycle. 0 rewards
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         mycLend.newCycle(0, 0);
 
         // New cycle with rewards. Ratio should now be 1:0.8
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(lossAmount, amountToWithdraw);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit
@@ -212,15 +212,15 @@ contract Deposit is Test {
         mycLend.deposit(depositAmount, address(this));
 
         // Cycle time ended, start new cycle. 0 rewards
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         mycLend.newCycle(0, 0);
 
         // New cycle with rewards. Ratio should now be 1:0.8
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(lossAmount, amountToWithdraw);
 
         // New cycle with rewards. Ratio should now be 1:0.8
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, amountToWithdraw);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit
@@ -253,15 +253,15 @@ contract Deposit is Test {
         mycLend.deposit(depositAmount, user);
 
         // Cycle time ended, start new cycle. 0 rewards
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         mycLend.newCycle(0, 0);
 
         // New cycle with rewards. Ratio should now be 1:0.8
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(lossAmount, amountToWithdraw);
 
         // New cycle with rewards. Ratio should still be 1:0.8
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, amountToWithdraw);
 
         // Balance not yet updated, but trueBalanceOf should reflect deposit

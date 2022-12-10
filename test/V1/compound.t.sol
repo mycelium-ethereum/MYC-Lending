@@ -68,10 +68,10 @@ contract Compound is Test {
         myc.approve(address(mycLend), type(uint256).max);
         mycLend.deposit(depositAmount, address(this));
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         vm.expectRevert("Deposit cap exceeded");

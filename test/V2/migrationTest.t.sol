@@ -129,15 +129,15 @@ contract Migration is Test {
         mycLend.deposit(depositAmount, users.user);
 
         // Cycle time ended, start new cycle. 30 wei rewards. these go to last weeks stakers. Of which, there are none.
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         // Now, cycle = 1. Rewards for last cycle = 0, but dust == rewardAmount
 
         // Get inside the preCycleTimelock window
-        vm.warp(block.timestamp + EIGHT_DAYS - (TWO_HOURS / 2));
+        skip(EIGHT_DAYS - (TWO_HOURS / 2));
 
-        vm.warp(block.timestamp + TWO_HOURS);
+        skip(TWO_HOURS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         // Rewards for each users.user should be rewardAmount (Because 2x rewardAmount has been given)
@@ -148,12 +148,12 @@ contract Migration is Test {
         assertApproxEqAbs(
             claimableAmount1,
             rewardAmount,
-            1 + mycLend.dust() / 2
+            2 + mycLend.dust() / 2
         );
         assertApproxEqAbs(
             claimableAmount2,
             rewardAmount,
-            1 + mycLend.dust() / 2
+            2 + mycLend.dust() / 2
         );
 
         // UPGRADE
@@ -177,13 +177,13 @@ contract Migration is Test {
         assertApproxEqAbs(
             claimableAmount1,
             rewardAmount,
-            1 + mycLendV2.dust() / 2
+            2 + mycLendV2.dust() / 2
         );
         claimableAmount1 = mycLend.getClaimableAmount(address(this));
         assertApproxEqAbs(
             claimableAmount1,
             rewardAmount,
-            1 + mycLendV2.dust() / 2
+            2 + mycLendV2.dust() / 2
         );
 
         // Set rewards in new contract
@@ -193,13 +193,13 @@ contract Migration is Test {
             tokensPerInterval * amountOfTimeToWaitForRewards
         );
         rewardDistributor.setTokensPerInterval(tokensPerInterval);
-        vm.warp(block.timestamp + amountOfTimeToWaitForRewards);
+        skip(amountOfTimeToWaitForRewards);
 
         uint256 claimable = rewardTracker.claimable(users.user);
         assertApproxEqAbs(
             (tokensPerInterval * amountOfTimeToWaitForRewards) / 2,
             claimable,
-            1
+            2
         );
 
         uint256 preBal = WETH.balanceOf(users.user);
@@ -209,14 +209,14 @@ contract Migration is Test {
         assertApproxEqAbs(
             preBal + (tokensPerInterval * amountOfTimeToWaitForRewards) / 2,
             postBal,
-            1
+            2
         );
 
         claimable = rewardTracker.claimable(address(this));
         assertApproxEqAbs(
             claimable,
             (tokensPerInterval * amountOfTimeToWaitForRewards) / 2,
-            1
+            2
         );
 
         preBal = WETH.balanceOf(address(this));
@@ -225,7 +225,7 @@ contract Migration is Test {
         assertApproxEqAbs(
             postBal,
             preBal + (tokensPerInterval * amountOfTimeToWaitForRewards) / 2,
-            1
+            2
         );
 
         mycLendV2.claim(false, "");
@@ -238,7 +238,7 @@ contract Migration is Test {
         assertApproxEqAbs(
             claimableAmount2,
             rewardAmount,
-            1 + mycLendV2.dust() / 2
+            2 + mycLendV2.dust() / 2
         );
     }
 
@@ -275,15 +275,15 @@ contract Migration is Test {
         mycLend.deposit(depositAmount, users.user);
 
         // Cycle time ended, start new cycle. 30 wei rewards. these go to last weeks stakers. Of which, there are none.
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         // Now, cycle = 1. Rewards for last cycle = 0, but dust == rewardAmount
 
         // Get inside the preCycleTimelock window
-        vm.warp(block.timestamp + EIGHT_DAYS - (TWO_HOURS / 2));
+        skip(EIGHT_DAYS - (TWO_HOURS / 2));
 
-        vm.warp(block.timestamp + TWO_HOURS);
+        skip(TWO_HOURS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         // Rewards for each users.user should be rewardAmount (Because 2x rewardAmount has been given)
@@ -333,7 +333,7 @@ contract Migration is Test {
             tokensPerInterval * amountOfTimeToWaitForRewards
         );
         rewardDistributor.setTokensPerInterval(tokensPerInterval);
-        vm.warp(block.timestamp + amountOfTimeToWaitForRewards);
+        skip(amountOfTimeToWaitForRewards);
 
         uint256 claimable = rewardTracker.claimable(address(this));
         assertApproxEqAbs(
@@ -400,19 +400,19 @@ contract Migration is Test {
         mycLend.deposit(depositAmount, users.user);
 
         // Cycle time ended, start new cycle. 30 wei rewards. these go to last weeks stakers. Of which, there are none.
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         // Now, cycle = 1. Rewards for last cycle = 0, but dust == rewardAmount
 
         // Get inside the preCycleTimelock window
-        vm.warp(block.timestamp + EIGHT_DAYS - (TWO_HOURS / 2));
+        skip(EIGHT_DAYS - (TWO_HOURS / 2));
         vm.expectRevert("Deposit requests locked");
         mycLend.deposit(depositAmount, address(this));
         vm.expectRevert("Redeem requests locked");
         mycLend.redeem(depositAmount, address(this), address(this));
 
-        vm.warp(block.timestamp + TWO_HOURS);
+        skip(TWO_HOURS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         // Now, cycle = 2. Rewards per share for last cycle should == rewardAmount * 2 / totalSupply
@@ -430,12 +430,12 @@ contract Migration is Test {
         assertApproxEqAbs(
             claimableAmount1,
             rewardAmount,
-            1 + mycLend.dust() / 2
+            2 + mycLend.dust() / 2
         );
         assertApproxEqAbs(
             claimableAmount2,
             rewardAmount,
-            1 + mycLend.dust() / 2
+            2 + mycLend.dust() / 2
         );
 
         // Test claiming
@@ -457,7 +457,7 @@ contract Migration is Test {
         upgradeToV2();
         // V2
         // Test loss amount
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(lossAmount, 0);
 
         // Now the ratio of shares to underlying MYC should be (depositAmount * 2):(depositAmount * 2 - lossAmount) = 200:180 = 2:1.8 = 1:0.9
@@ -483,10 +483,10 @@ contract Migration is Test {
         vm.prank(users.user2);
         mycLend.deposit(depositAmount, users.user2);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
         assertEq(mycLend.getClaimableAmount(users.user2), 0);
@@ -511,7 +511,7 @@ contract Migration is Test {
             address(this)
         );
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
         balanceBefore = myc.balanceOf(address(this));
@@ -521,7 +521,7 @@ contract Migration is Test {
             balanceBefore + expectedRedeemAmount
         );
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         balanceBefore = mycLend.trueBalanceOf(users.user);
@@ -548,7 +548,7 @@ contract Migration is Test {
         // Set user compounding
         vm.prank(users.user3);
         mycLend.setUserAutoCompound(true);
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
         mycLend.updateUser(users.user3);
         // Give the mycBuyer enough to swap ETH -> MYC
@@ -567,7 +567,7 @@ contract Migration is Test {
             mycLend.compound(users.user3, "");
         }
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
         // True balance should equal the balance before, plus the shares gained from the compound.
@@ -631,19 +631,19 @@ contract Migration is Test {
         mycLend.deposit(depositAmount, users.user);
 
         // Cycle time ended, start new cycle. 30 wei rewards. these go to last weeks stakers. Of which, there are none.
-        vm.warp(block.timestamp + FOUR_DAYS);
+        skip(FOUR_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         // Now, cycle = 1. Rewards for last cycle = 0, but dust == rewardAmount
 
         // Get inside the preCycleTimelock window
-        vm.warp(block.timestamp + EIGHT_DAYS - (TWO_HOURS / 2));
+        skip(EIGHT_DAYS - (TWO_HOURS / 2));
         vm.expectRevert("Deposit requests locked");
         mycLend.deposit(depositAmount, address(this));
         vm.expectRevert("Redeem requests locked");
         mycLend.redeem(depositAmount, address(this), address(this));
 
-        vm.warp(block.timestamp + TWO_HOURS);
+        skip(TWO_HOURS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         // Now, cycle = 2. Rewards per share for last cycle should == rewardAmount * 2 / totalSupply
@@ -661,12 +661,12 @@ contract Migration is Test {
         assertApproxEqAbs(
             claimableAmount1,
             rewardAmount,
-            1 + mycLend.dust() / 2
+            2 + mycLend.dust() / 2
         );
         assertApproxEqAbs(
             claimableAmount2,
             rewardAmount,
-            1 + mycLend.dust() / 2
+            2 + mycLend.dust() / 2
         );
 
         // Test claiming
@@ -687,7 +687,7 @@ contract Migration is Test {
         assertEq(address(this).balance, balanceBefore);
 
         // Test loss amount
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(lossAmount, 0);
 
         // Now the ratio of shares to underlying MYC should be (depositAmount * 2):(depositAmount * 2 - lossAmount) = 200:180 = 2:1.8 = 1:0.9
@@ -713,10 +713,10 @@ contract Migration is Test {
         vm.prank(users.user2);
         mycLend.deposit(depositAmount, users.user2);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
         assertEq(mycLend.getClaimableAmount(users.user2), 0);
@@ -741,7 +741,7 @@ contract Migration is Test {
             address(this)
         );
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
         balanceBefore = myc.balanceOf(address(this));
@@ -751,7 +751,7 @@ contract Migration is Test {
             balanceBefore + expectedRedeemAmount
         );
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         balanceBefore = mycLend.trueBalanceOf(users.user);
@@ -778,7 +778,7 @@ contract Migration is Test {
         // Set user compounding
         vm.prank(users.user3);
         mycLend.setUserAutoCompound(true);
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
         mycLend.updateUser(users.user3);
         // Give the mycBuyer enough to swap ETH -> MYC
@@ -797,7 +797,7 @@ contract Migration is Test {
             mycLend.compound(users.user3, "");
         }
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
         // True balance should equal the balance before, plus the shares gained from the compound.

@@ -73,8 +73,6 @@ contract Migration is Test {
     }
 
     function testTransfer(uint256 depositAmount, uint256 rewardAmount) public {
-        // uint256 depositAmount = 1459092071113418115754;
-        // uint256 rewardAmount = 22420895;
         vm.assume(depositAmount > 0);
         vm.assume(rewardAmount > 1e18);
         vm.assume(depositAmount < INITIAL_MINT_AMOUNT / 2);
@@ -96,48 +94,35 @@ contract Migration is Test {
         mycLend.deposit(depositAmount, users.user);
 
         // Cycle time ended, start new cycle. 30 wei rewards. these go to last weeks stakers. Of which, there are none.
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
-        console.log(mycLend.getClaimableAmount(address(this)));
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
-        console.log(mycLend.getClaimableAmount(address(this)));
-        console.log(mycLend.dust());
 
-        console.log(1);
         assertApproxEqAbs(
             mycLend.getClaimableAmount(users.user),
             rewardAmount,
             mycLend.dust() + 1 + rewardAmount / 1e8
         );
-        console.log(2);
         assertApproxEqAbs(
             mycLend.getClaimableAmount(address(this)),
             rewardAmount,
             mycLend.dust() + 1 + rewardAmount / 1e8
         );
-        console.log(3);
 
-        console.log(mycLend.getClaimableAmount(address(this)));
-        vm.warp(block.timestamp + EIGHT_DAYS);
-        mycLend.newCycle{value: rewardAmount}(0, 0);
-        console.log(mycLend.getClaimableAmount(address(this)));
-
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
-        console.log("a");
-        console.log(mycLend.getClaimableAmount(address(this)));
-        console.log(rewardAmount);
-        console.log(rewardAmount * 2);
+        skip(EIGHT_DAYS);
+        mycLend.newCycle{value: rewardAmount}(0, 0);
 
         mycLend.transfer(users.user2, depositAmount);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
         assertEq(mycLend.trueBalanceOf(address(this)), 0);
         assertEq(mycLend.trueBalanceOf(users.user2), depositAmount);

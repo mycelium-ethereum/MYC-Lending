@@ -71,8 +71,8 @@ contract Claiming is Test {
         vm.assume(depositAmount < myc.balanceOf(address(this)) / 3);
         vm.assume(depositAmount > 0);
         vm.assume(participants < depositAmount);
-        // Limit to 2000 otherwise it sometimes takes too long
-        vm.assume(participants < 2000);
+        // Limit to 150 otherwise it sometimes takes too long
+        vm.assume(participants < 150);
 
         for (uint256 i = 0; i < participants; i++) {
             address user = address(uint160(i + 10));
@@ -84,7 +84,7 @@ contract Claiming is Test {
             mycLend.deposit(depositAmount / participants, user);
         }
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
 
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
@@ -97,7 +97,7 @@ contract Claiming is Test {
             assertEq(postBalance, preBalance);
         }
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         uint256 dustSum = mycLend.dust();
         mycLend.newCycle{value: rewardAmount}(0, 0);
         dustSum += mycLend.dust();
@@ -139,15 +139,15 @@ contract Claiming is Test {
         myc.approve(address(mycLend), depositAmount);
         mycLend.deposit(depositAmount, address(this));
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
 
         mycLend.newCycle{value: rewardAmount}(0, 0);
         uint256 dust = mycLend.dust();
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
 
         uint256 expectedClaimable = rewardAmount
@@ -166,14 +166,14 @@ contract Claiming is Test {
         vm.prank(user);
         mycLend.deposit(depositAmount / split, user);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
         // Shouldn't get any rewards.
         assertEq(mycLend.getClaimableAmount(user), 0);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         expectedClaimable =
@@ -218,16 +218,16 @@ contract Claiming is Test {
 
         uint256 dustSum = mycLend.dust();
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
         dustSum += mycLend.dust();
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle(0, 0);
         dustSum += mycLend.dust();
         // Shouldn't get any rewards.
         assertApproxEqAbs(mycLend.getClaimableAmount(user), 0, dustSum);
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         assertApproxEqAbs(
@@ -253,8 +253,8 @@ contract Claiming is Test {
         vm.assume(depositAmount < depositCap / participants);
         vm.assume(depositAmount > 0);
         vm.assume(participants < depositAmount);
-        // Limit to 2000 otherwise it sometimes takes too long
-        vm.assume(participants < 2000);
+        // Limit to 150 otherwise it sometimes takes too long
+        vm.assume(participants < 150);
 
         for (uint256 i = 0; i < participants; i++) {
             address user = address(uint160(i + 10));
@@ -268,7 +268,7 @@ contract Claiming is Test {
 
         myc.transfer(address(mycBuyer), myc.balanceOf(address(this)));
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
 
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
@@ -282,7 +282,7 @@ contract Claiming is Test {
             assertEq(postBalance, preBalance);
         }
 
-        vm.warp(block.timestamp + EIGHT_DAYS);
+        skip(EIGHT_DAYS);
         mycLend.newCycle{value: rewardAmount}(0, 0);
 
         for (uint256 i = 0; i < participants; i++) {
