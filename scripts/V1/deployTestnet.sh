@@ -46,13 +46,9 @@ cast send --rpc-url \
     "initialize(address,address,uint256,uint256,uint256,uint256,address)" \
     $myc $gov $cycleLength $firstCycleStart $preCycleTimelock $depositCap $admin
 
-echo "hi"
-
 dummyMycBuyer=$(forge create --rpc-url $RPC_URL \
     --constructor-args $myc $gov \
     --private-key $PRIVATE_KEY src/V1/DummyMycBuyer.sol:DummyMycBuyer)
-
-# echo "dummyMycBuyer output: ${dummyMycBuyer}"
 
 arr3=($dummyMycBuyer)
 dummyMycBuyer=${arr3[9]}
