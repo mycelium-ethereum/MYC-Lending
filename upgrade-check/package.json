@@ -1,0 +1,17 @@
+{
+  "name": "upgrade-check",
+  "version": "1.0.0",
+  "description": "Minimal hardhat project for checking upgrade safety of LentMycWithMigration",
+  "main": "index.js",
+  "author": "CalabashSquash",
+  "license": "MIT",
+  "devDependencies": {
+    "@nomiclabs/hardhat-ethers": "^2.2.1",
+    "@openzeppelin/contracts": "^4.7.3",
+    "@openzeppelin/contracts-upgradeable": "^4.7.3",
+    "@openzeppelin/hardhat-upgrades": "^1.21.0",
+    "ethers": "^5.7.2",
+    "hardhat": "^2.12.1",
+    "solmate": "^6.6.1"
+  }
+}
